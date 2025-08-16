@@ -23,11 +23,14 @@ sample_gaming_sut/
 ├── src/                       # Source code
 │   ├── models.py              # Data models for users, rooms, game rounds, and bets
 │   ├── game_engine.py         # Core game logic and state management
-│   ├── game_server.py         # WebSocket server handling client connections
+│   ├── tornado_game_server.py # Primary WebSocket server using Tornado
+│   ├── game_server.py         # Alternative WebSocket server using websockets library
 │   └── game_client.py         # Client implementation with interactive and demo modes
 ├── tests/                     # Test suite
-│   └── test_game_system.py    # Comprehensive test suite
-├── run_server.py              # Server entry point
+│   ├── test_game_system.py    # Comprehensive unittest test suite
+│   └── test_game_system_pytest.py # Pytest version of test suite
+├── run_tornado_server.py      # Primary server entry point (Tornado-based)
+├── run_server.py              # Alternative server entry point (websockets-based)
 ├── run_client.py              # Client entry point
 ├── run_tests.py               # Test runner entry point
 ├── config.py                  # Configuration management
@@ -69,13 +72,38 @@ sample_gaming_sut/
 
 ### Running the Server
 
+**Primary Server (Tornado-based):**
 ```bash
-# Basic server startup
+# Basic server startup (runs on port 8767 by default)
+python run_tornado_server.py
+
+# With custom configuration
+python run_tornado_server.py --host 0.0.0.0 --port 8767 --max-connections 200
+```
+
+**Alternative Server (websockets-based):**
+```bash
+# Basic server startup (runs on port 8765 by default)
 python run_server.py
 
 # With custom configuration
 python run_server.py --host 0.0.0.0 --port 8765 --max-connections 200
 ```
+
+**Server Comparison:**
+
+| Feature | Tornado Server (Primary) | Websockets Server |
+|---------|---------------------------|-------------------|
+| Port | 8767 (default) | 8765 (default) |
+| Payout Calculation | ✅ Fixed and working correctly | ✅ Working correctly |
+| Event Loop Handling | ✅ Proper async integration | ✅ Good |
+| Shutdown (Ctrl+C) | ✅ Works reliably | ✅ Works reliably |
+| Client Compatibility | ✅ Full compatibility | ✅ Full compatibility |
+| Production Ready | ✅ Yes | ✅ Yes |
+| Performance | ✅ Good | ✅ Good |
+
+**Why use the Tornado server?**
+The Tornado-based server is the primary implementation with proper async event loop integration and has been thoroughly tested for reliability. Both servers now have correct payout calculations and proper shutdown handling.
 
 **Stopping the Server:**
 - Press `Ctrl+C` to gracefully shutdown the server
@@ -85,14 +113,17 @@ python run_server.py --host 0.0.0.0 --port 8765 --max-connections 200
 ### Running the Client
 
 ```bash
-# Interactive mode
+# Interactive mode (connects to primary Tornado server by default)
 python run_client.py --interactive
 
-# Automated demo
+# Automated demo (connects to primary Tornado server by default)
 python run_client.py --demo
 
-# Custom server
-python run_client.py --server ws://your-server:8765 --demo
+# Connect to custom server address (Tornado server)
+python run_client.py --server ws://localhost:8767 --demo
+
+# Connect to alternative websockets server
+python run_client.py --server ws://localhost:8765 --demo
 ```
 
 ## Game Rules
@@ -150,11 +181,14 @@ All messages use Protocol Buffers with binary serialization:
 ### Environment Variables
 
 ```bash
-# Server configuration
+# Server configuration (Tornado server - primary)
 GAME_HOST=localhost
-GAME_PORT=8765
+GAME_PORT=8767
 GAME_MAX_CONNECTIONS=100
 GAME_SESSION_TIMEOUT=1800
+
+# Alternative server configuration (websockets server)
+# GAME_PORT=8765
 
 # Game settings
 GAME_MAX_BETS_PER_ROUND=10
@@ -163,7 +197,7 @@ GAME_MAX_BET=1000
 GAME_DEFAULT_BALANCE=1000
 
 # Client configuration
-GAME_SERVER_URL=ws://localhost:8765
+GAME_SERVER_URL=ws://localhost:8767
 GAME_CONNECTION_TIMEOUT=10
 
 # Logging
@@ -188,11 +222,14 @@ The system includes pre-configured test users:
 # Run all tests
 python run_tests.py
 
-# Run with pytest
-pytest tests/test_game_system.py -v
+# Run unittest version
+python -m unittest tests/test_game_system.py -v
+
+# Run pytest version
+pytest tests/test_game_system_pytest.py -v
 
 # Run specific test categories
-pytest tests/test_game_system.py::TestGameEngine -v
+pytest tests/test_game_system_pytest.py::TestGameEngine -v
 ```
 
 ### Code Quality
@@ -244,8 +281,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
 RUN protoc --python_out=. --pyi_out=. proto/game_messages.proto
-EXPOSE 8765
-CMD ["python", "run_server.py", "--host", "0.0.0.0"]
+EXPOSE 8767
+CMD ["python", "run_tornado_server.py", "--host", "0.0.0.0"]
 ```
 
 ### Performance Considerations

@@ -5,6 +5,9 @@ from enum import Enum
 import uuid
 import bcrypt
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GameRoundStatus(Enum):
@@ -185,10 +188,13 @@ class GameState:
                 if user.username == username and user.verify_password(password):
                     # Check if user already has an active session
                     if user.session_token and not user.is_session_expired():
+                        logger.warning(f"User {username} already has active session, login blocked")
                         return None  # User already logged in
                     
                     user.generate_session_token()
+                    logger.info(f"User {username} authenticated successfully, session token generated")
                     return user
+            logger.warning(f"Authentication failed for username: {username}")
             return None
 
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
@@ -250,6 +256,10 @@ class GameState:
                 user = self.users.get(user_id)
                 if user:
                     user.session_token = None
+                    logger.info(f"User {user_id} session invalidated due to disconnection")
+            else:
+                # Connection was not authenticated, just clean up
+                logger.debug("Removing unauthenticated connection")
 
     async def get_user_by_connection(self, websocket) -> Optional[User]:
         user_id = self.connections.get(websocket)

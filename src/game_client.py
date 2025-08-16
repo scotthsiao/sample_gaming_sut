@@ -57,8 +57,21 @@ class GameClient:
     async def disconnect(self):
         """Disconnect from server"""
         if self.websocket:
-            await self.websocket.close()
-            logger.info("Disconnected from server")
+            try:
+                await self.websocket.close()
+            except Exception as e:
+                logger.warning(f"Error closing websocket: {e}")
+            finally:
+                self.websocket = None
+                
+        # Reset all client state
+        self.authenticated = False
+        self.user_id = None
+        self.balance = 0
+        self.current_room = None
+        self.session_token = None
+        
+        logger.info("Disconnected from server")
 
     async def login(self, username: str, password: str) -> bool:
         """Authenticate with the server"""
@@ -295,23 +308,30 @@ class GameClient:
         if not self.websocket:
             raise RuntimeError("Not connected to server")
 
-        # Receive header
-        header_data = await self.websocket.recv()
-        if len(header_data) < 8:
-            raise ValueError("Invalid header size")
+        try:
+            # Receive header with timeout
+            header_data = await asyncio.wait_for(self.websocket.recv(), timeout=10.0)
+            if len(header_data) < 8:
+                raise ValueError("Invalid header size")
 
-        command_id, length = struct.unpack('<II', header_data[:8])
-        payload = header_data[8:]
+            command_id, length = struct.unpack('<II', header_data[:8])
+            payload = header_data[8:]
 
-        # Receive remaining payload if needed
-        while len(payload) < length:
-            additional_data = await self.websocket.recv()
-            payload += additional_data
+            # Receive remaining payload if needed
+            while len(payload) < length:
+                additional_data = await asyncio.wait_for(self.websocket.recv(), timeout=10.0)
+                payload += additional_data
 
-        return {
-            'command_id': command_id,
-            'payload': payload
-        }
+            return {
+                'command_id': command_id,
+                'payload': payload
+            }
+        except asyncio.TimeoutError:
+            logger.error("Timeout waiting for server response")
+            raise RuntimeError("Server response timeout")
+        except Exception as e:
+            logger.error(f"Error receiving message: {e}")
+            raise
 
     async def play_game_session(self, bets: List[tuple]) -> Dict:
         """Play a complete game session with multiple bets
@@ -362,9 +382,9 @@ class GameClient:
         return results or {}
 
 
-async def interactive_client():
+async def interactive_client(server_url: str = "ws://localhost:8767"):
     """Interactive client for manual testing"""
-    client = GameClient("ws://localhost:8765")
+    client = GameClient(server_url)
     
     if not await client.connect():
         return
@@ -430,9 +450,9 @@ async def interactive_client():
         await client.disconnect()
 
 
-async def demo_session():
+async def demo_session(server_url: str = "ws://localhost:8767"):
     """Automated demo session"""
-    client = GameClient("ws://localhost:8765")
+    client = GameClient(server_url)
     
     if not await client.connect():
         return
@@ -470,16 +490,16 @@ async def demo_session():
 async def main():
     """Main client entry point"""
     parser = argparse.ArgumentParser(description='Game Client')
-    parser.add_argument('--server', default='ws://localhost:8765', help='Server URL')
+    parser.add_argument('--server', default='ws://localhost:8767', help='Server URL')
     parser.add_argument('--demo', action='store_true', help='Run automated demo')
     parser.add_argument('--interactive', action='store_true', help='Run interactive client')
     
     args = parser.parse_args()
     
     if args.demo:
-        await demo_session()
+        await demo_session(args.server)
     elif args.interactive:
-        await interactive_client()
+        await interactive_client(args.server)
     else:
         print("Use --demo for automated demo or --interactive for manual testing")
 

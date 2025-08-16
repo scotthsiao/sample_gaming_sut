@@ -171,11 +171,22 @@ class GameServer:
             # Add connection to game state
             await self.game_state.add_connection(websocket, 0)  # Will be updated on login
             
-            async for message in websocket:
-                if isinstance(message, bytes):
-                    await self.process_message(websocket, message)
-                else:
-                    logger.warning(f"Received non-binary message from {client_addr}")
+            while True:
+                try:
+                    message = await websocket.recv()
+                    if isinstance(message, bytes):
+                        await self.process_message(websocket, message)
+                    else:
+                        logger.warning(f"Received non-binary message from {client_addr}")
+                except websockets.exceptions.ConnectionClosedOK:
+                    logger.info(f"Client {client_addr} disconnected normally")
+                    break
+                except websockets.exceptions.ConnectionClosedError as e:
+                    logger.info(f"Client {client_addr} disconnected with error: {e}")
+                    break
+                except websockets.exceptions.ConnectionClosed:
+                    logger.info(f"Client {client_addr} connection closed")
+                    break
                     
         except websockets.exceptions.ConnectionClosed:
             logger.info(f"Client {client_addr} disconnected")
