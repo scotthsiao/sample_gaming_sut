@@ -1,0 +1,112 @@
+// game_messages.proto
+syntax = "proto3";
+
+package gaming;
+
+// Authentication Messages
+message LoginRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    bool success = 1;
+    string message = 2;
+    string session_token = 3;
+    int64 user_id = 4;
+    int64 balance = 5;
+}
+
+// Room Management Messages
+message RoomJoinRequest {
+    int32 room_id = 1;
+}
+
+message RoomJoinResponse {
+    bool success = 1;
+    string message = 2;
+    int32 room_id = 3;
+    int32 player_count = 4;
+    int64 jackpot_pool = 5;
+}
+
+// Game State Messages
+message SnapshotRequest {
+    // Empty message
+}
+
+message SnapshotResponse {
+    int64 user_balance = 1;
+    repeated Bet active_bets = 2;
+    int32 current_room = 3;
+    int64 jackpot_pool = 4;
+    GameRoundStatus round_status = 5;
+}
+
+message Bet {
+    int32 dice_face = 1;
+    int64 amount = 2;
+    string bet_id = 3;
+    string round_id = 4;
+}
+
+enum GameRoundStatus {
+    NO_ACTIVE_ROUND = 0;
+    BETTING_PHASE = 1;
+    WAITING_RESULTS = 2;
+}
+
+// Betting Messages
+message BetPlacementRequest {
+    int32 dice_face = 1;  // 1-6
+    int64 amount = 2;     // Bet amount
+    string round_id = 3;  // Game round identifier
+}
+
+message BetPlacementResponse {
+    bool success = 1;
+    string message = 2;
+    string bet_id = 3;
+    int64 remaining_balance = 4;
+    string round_id = 5;
+}
+
+message BetFinishedRequest {
+    string round_id = 1;  // Game round identifier
+}
+
+message BetFinishedResponse {
+    bool success = 1;
+    string message = 2;
+    string round_id = 3;
+}
+
+// Result Messages
+message ReckonResultRequest {
+    string round_id = 1;  // Game round identifier
+}
+
+message ReckonResultResponse {
+    int32 dice_result = 1;           // 1-6
+    repeated BetResult bet_results = 2;
+    int64 total_winnings = 3;
+    int64 new_balance = 4;
+    int64 updated_jackpot_pool = 5;
+    string round_id = 6;
+}
+
+message BetResult {
+    string bet_id = 1;
+    int32 dice_face = 2;
+    int64 bet_amount = 3;
+    bool won = 4;
+    int64 payout = 5;
+    string round_id = 6;
+}
+
+// Error Messages
+message ErrorResponse {
+    int32 error_code = 1;
+    string error_message = 2;
+    string details = 3;
+}
