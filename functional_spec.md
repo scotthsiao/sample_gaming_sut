@@ -13,6 +13,7 @@
 2. [Project Overview](#2-project-overview)
 3. [Scope and Objectives](#3-scope-and-objectives)
 4. [System Architecture](#4-system-architecture)
+   - [Game Logic Flow](#43-game-logic-flow)
 5. [Functional Requirements](#5-functional-requirements)
 6. [Non-Functional Requirements](#6-non-functional-requirements)
 7. [User Interface Requirements](#7-user-interface-requirements)
@@ -142,6 +143,87 @@ While this is a tutorial project, it simulates real-world gambling application r
 - **Message Handler:** Processes incoming/outgoing Protocol Buffers messages
 - **Game Interface:** Provides user interaction capabilities
 - **State Synchronizer:** Maintains local game state consistency
+
+### 4.3 Game Logic Flow
+
+The following Mermaid flowchart illustrates the complete game logic flow from user connection to game completion:
+
+```mermaid
+flowchart TD
+    A[Client Connects] --> B[WebSocket Handshake]
+    B --> C[Send Login Request]
+    C --> D{Authentication Valid?}
+    D -->|No| E[Send Error Response]
+    E --> F[Connection Terminated]
+    D -->|Yes| G[Generate Session Token]
+    G --> H[Send Login Response]
+    H --> I[Client Joins Room]
+    I --> J[Send Room Join Request]
+    J --> K{Room Available?}
+    K -->|No| L[Send Room Error]
+    L --> M[User Selects Different Room]
+    M --> J
+    K -->|Yes| N[Add User to Room]
+    N --> O[Send Room Join Response]
+    O --> P[Client Ready for Game]
+    
+    P --> Q[User Places Bet]
+    Q --> R[Send Bet Placement Request]
+    R --> S{First Bet in Round?}
+    S -->|Yes| T[Create New Game Round]
+    T --> U[Generate Round ID]
+    U --> V[Validate Bet Parameters]
+    S -->|No| W[Get Existing Round]
+    W --> V
+    
+    V --> X{Bet Valid?}
+    X -->|No| Y[Send Bet Error Response]
+    Y --> P
+    X -->|Yes| Z[Deduct Amount from Balance]
+    Z --> AA[Add Bet to Round]
+    AA --> BB[Send Bet Success Response]
+    BB --> CC{More Bets?}
+    CC -->|Yes| Q
+    CC -->|No| DD[Send Bet Finished Request]
+    
+    DD --> EE[Change Round Status to WAITING_RESULTS]
+    EE --> FF[Send Bet Finished Response]
+    FF --> GG[Send Reckon Result Request]
+    GG --> HH[Generate Random Dice Result]
+    HH --> II[Calculate Bet Results]
+    II --> JJ[Update User Balance]
+    JJ --> KK[Update Jackpot Pool]
+    KK --> LL[Send Game Results Response]
+    LL --> MM[Display Results to User]
+    MM --> NN{Play Again?}
+    NN -->|Yes| P
+    NN -->|No| OO[User Disconnects]
+    OO --> PP[Clean Up Session]
+    PP --> QQ[Remove from Room]
+    QQ --> RR[End]
+
+    style A fill:#e1f5fe
+    style G fill:#c8e6c9
+    style T fill:#fff3e0
+    style HH fill:#fce4ec
+    style LL fill:#e8f5e8
+    style F fill:#ffebee
+    style Y fill:#ffebee
+```
+
+**Key Decision Points:**
+- **Authentication**: Validates user credentials before allowing game access
+- **Room Management**: Ensures room capacity and availability
+- **Round Management**: Creates new rounds for first bets or uses existing rounds
+- **Bet Validation**: Checks dice face (1-6), amount (1-1000), and user balance
+- **Result Calculation**: Uses cryptographically secure random number generation
+- **Balance Updates**: Applies winnings/losses and updates jackpot pool
+
+**Error Handling Paths:**
+- Invalid authentication → Connection termination
+- Invalid room selection → Room reselection
+- Invalid bet parameters → Bet retry
+- All errors include appropriate error codes and messages
 
 ---
 
