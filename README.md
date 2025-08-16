@@ -77,6 +77,11 @@ python run_server.py
 python run_server.py --host 0.0.0.0 --port 8765 --max-connections 200
 ```
 
+**Stopping the Server:**
+- Press `Ctrl+C` to gracefully shutdown the server
+- On Windows: If Ctrl+C doesn't work, you can close the terminal window
+- Alternative: Use Task Manager to end the Python process if needed
+
 ### Running the Client
 
 ```bash

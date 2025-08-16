@@ -64,6 +64,7 @@ class GameServer:
         self.game_engine = GameEngine(self.game_state)
         self.running = False
         self.cleanup_task = None
+        self.websocket_server = None
         
         # Rate limiting: user_id -> (last_message_time, message_count)
         self.rate_limits: Dict[int, tuple] = {}
@@ -86,40 +87,78 @@ class GameServer:
         
         logger.info(f"Starting game server on {self.host}:{self.port}")
         
-        async with websockets.serve(
+        # Create the server
+        self.websocket_server = await websockets.serve(
             self.handle_client,
             self.host,
             self.port,
             max_size=1024*1024,  # 1MB max message size
             ping_interval=20,
             ping_timeout=10
-        ):
-            logger.info("Game server started successfully")
-            
-            # Wait for shutdown signal
-            await self.wait_for_shutdown()
+        )
+        
+        logger.info("Game server started successfully")
+        try:
+            print(f"🎮 Game server running on ws://{self.host}:{self.port}")
+        except UnicodeEncodeError:
+            print(f"Game server running on ws://{self.host}:{self.port}")
+        print("Press Ctrl+C to stop the server")
+        
+        # Wait for shutdown signal
+        await self.wait_for_shutdown()
 
     async def wait_for_shutdown(self):
         """Wait for shutdown signal"""
         try:
             while self.running:
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)  # Check more frequently for shutdown
+            
+            # If we exit the loop, trigger shutdown
+            logger.info("Shutdown signal detected, shutting down...")
+            await self.shutdown()
+            
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt")
-        finally:
+            self.running = False
             await self.shutdown()
+        except asyncio.CancelledError:
+            logger.info("Server task cancelled")
+            self.running = False
 
     async def shutdown(self):
         """Gracefully shutdown the server"""
+        if not self.running:
+            return  # Already shutting down
+            
         logger.info("Shutting down game server...")
         self.running = False
         
+        # Close the WebSocket server
+        if self.websocket_server:
+            logger.info("Closing WebSocket server...")
+            self.websocket_server.close()
+            await self.websocket_server.wait_closed()
+        
+        # Cancel cleanup task
         if self.cleanup_task:
+            logger.info("Cancelling cleanup task...")
             self.cleanup_task.cancel()
             try:
                 await self.cleanup_task
             except asyncio.CancelledError:
                 pass
+        
+        # Clean up connections
+        logger.info("Cleaning up active connections...")
+        active_connections = len(self.game_state.connections)
+        if active_connections > 0:
+            logger.info(f"Closing {active_connections} active connections...")
+            # Close all WebSocket connections
+            for websocket in list(self.game_state.connections.keys()):
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass  # Connection might already be closed
         
         logger.info("Game server shutdown complete")
 
@@ -454,10 +493,13 @@ def setup_signal_handlers(server):
     """Setup signal handlers for graceful shutdown"""
     def signal_handler(signum, frame):
         logger.info(f"Received signal {signum}")
-        asyncio.create_task(server.shutdown())
+        if server.running:  # Only trigger shutdown once
+            server.running = False
     
+    # Use traditional signal handling which works on all platforms
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, signal_handler)
 
 
 async def main():
@@ -476,10 +518,14 @@ async def main():
         await server.start_server()
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
+        server.running = False
     except Exception as e:
         logger.error(f"Server error: {e}")
+        server.running = False
     finally:
-        await server.shutdown()
+        # Shutdown will be called from wait_for_shutdown if not already done
+        if server.running:
+            await server.shutdown()
 
 
 if __name__ == "__main__":
