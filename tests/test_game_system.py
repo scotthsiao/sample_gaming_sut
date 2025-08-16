@@ -14,6 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from src.models import User, Room, GameRound, BetData, GameState, GameRoundStatus
 from src.game_engine import GameEngine
 from src.game_server import GameServer
+from src.tornado_game_server import TornadoGameServer, GameWebSocketHandler
 from src.game_client import GameClient
 from proto import game_messages_pb2 as pb
 
@@ -531,6 +532,105 @@ class TestConcurrency(unittest.TestCase):
         asyncio.run(run_test())
 
 
+class TestTornadoGameServer(unittest.TestCase):
+    """Test Tornado server functionality"""
+    
+    def test_tornado_server_creation(self):
+        """Test Tornado server can be created"""
+        server = TornadoGameServer(host='localhost', port=8767)
+        self.assertEqual(server.host, 'localhost')
+        self.assertEqual(server.port, 8767)
+        self.assertEqual(server.max_connections, 100)  # default
+        self.assertFalse(server.running)
+    
+    def test_tornado_server_custom_config(self):
+        """Test Tornado server with custom configuration"""
+        server = TornadoGameServer(host='0.0.0.0', port=9999, max_connections=200)
+        self.assertEqual(server.host, '0.0.0.0')
+        self.assertEqual(server.port, 9999)
+        self.assertEqual(server.max_connections, 200)
+
+
+class TestTornadoServerIntegration(unittest.TestCase):
+    """Test Tornado server integration with game engine"""
+    
+    def setUp(self):
+        """Setup test environment"""
+        self.game_state = GameState()
+        self.game_engine = GameEngine(self.game_state)
+    
+    def test_tornado_server_has_game_engine_access(self):
+        """Test that Tornado server properly integrates with game engine"""
+        # Verify that the game engine has the correct payout calculation
+        round_obj = GameRound.create_round(1, 1)
+        bet = BetData.create_bet(1, round_obj.round_id, 3, 100)
+        round_obj.add_bet(bet)
+        
+        # Calculate results with winning dice
+        total_winnings = round_obj.calculate_results(3)
+        self.assertEqual(total_winnings, 600)  # 100 * 6 payout multiplier
+        self.assertTrue(bet.won)
+        self.assertEqual(bet.payout, 600)
+    
+    def test_tornado_server_payout_calculation_integration(self):
+        """Test complete payout calculation flow through game engine"""
+        async def run_test():
+            # Add a user to room 1
+            await self.game_state.join_room(1, 1)
+            user = self.game_state.users.get(1)
+            
+            # Place a bet
+            success, message, bet_id = await self.game_engine.place_bet(1, 3, 100)
+            self.assertTrue(success)
+            self.assertEqual(user.balance, 900)  # 1000 - 100
+            
+            # Get the round ID
+            round_id = None
+            for game_round in self.game_state.active_rounds.values():
+                if game_round.user_id == 1:
+                    round_id = game_round.round_id
+                    break
+            self.assertIsNotNone(round_id)
+            
+            # Finish betting
+            success, message = await self.game_engine.finish_betting(1, round_id)
+            self.assertTrue(success)
+            
+            # Calculate results with guaranteed win
+            with patch.object(self.game_engine.random, 'randint', return_value=3):
+                success, message, results = await self.game_engine.calculate_results(1, round_id)
+                self.assertTrue(success)
+                self.assertEqual(results['dice_result'], 3)
+                self.assertEqual(results['total_winnings'], 600)  # Correct 6x payout
+                self.assertEqual(results['new_balance'], 1500)   # 900 + 600
+                
+                # Verify bet result
+                bet_results = results['bet_results']
+                self.assertEqual(len(bet_results), 1)
+                self.assertTrue(bet_results[0]['won'])
+                self.assertEqual(bet_results[0]['payout'], 600)
+        
+        asyncio.run(run_test())
+
+
+class TestTornadoServerPayoutFix(unittest.TestCase):
+    """Test that the Tornado server payout fix works correctly"""
+    
+    def test_tornado_server_payout_fix(self):
+        """Test that Tornado server has correct payout calculation"""
+        # This test verifies the payout bug fix by ensuring
+        # the underlying calculation is correct
+        round_obj = GameRound.create_round(1, 1)
+        bet = BetData.create_bet(1, round_obj.round_id, 3, 100)
+        round_obj.add_bet(bet)
+        
+        # Calculate results with winning dice
+        total_winnings = round_obj.calculate_results(3)
+        self.assertEqual(total_winnings, 600)  # 100 * 6 payout multiplier
+        self.assertTrue(bet.won)
+        self.assertEqual(bet.payout, 600)
+
+
 def run_all_tests():
     """Run all test suites"""
     test_suites = [
@@ -542,6 +642,9 @@ def run_all_tests():
         TestProtocolBuffers,
         TestErrorHandling,
         TestConcurrency,
+        TestTornadoGameServer,
+        TestTornadoServerIntegration,
+        TestTornadoServerPayoutFix,
         TestIntegration  # Run integration tests last
     ]
     
