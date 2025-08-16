@@ -147,12 +147,14 @@ class TestGameEngine(unittest.TestCase):
     def test_place_bet_insufficient_balance(self):
         """Test bet placement with insufficient balance"""
         async def run_test():
-            success, message, bet_id = await self.game_engine.place_bet(1, 3, 2000)
+            # Set user balance to 50, then try to bet 100 (within max limit but exceeds balance)
+            self.user.balance = 50
+            success, message, bet_id = await self.game_engine.place_bet(1, 3, 100)
             
             self.assertFalse(success)
             self.assertEqual(message, "Insufficient balance")
             self.assertIsNone(bet_id)
-            self.assertEqual(self.user.balance, 1000)  # Unchanged
+            self.assertEqual(self.user.balance, 50)  # Unchanged
         
         asyncio.run(run_test())
     
@@ -163,6 +165,25 @@ class TestGameEngine(unittest.TestCase):
             
             self.assertFalse(success)
             self.assertEqual(message, "Invalid dice face (must be 1-6)")
+            self.assertIsNone(bet_id)
+        
+        asyncio.run(run_test())
+    
+    def test_place_bet_invalid_amount(self):
+        """Test bet placement with invalid bet amount"""
+        async def run_test():
+            # Test amount too high
+            success, message, bet_id = await self.game_engine.place_bet(1, 3, 2000)
+            
+            self.assertFalse(success)
+            self.assertEqual(message, "Invalid bet amount (1-1000)")
+            self.assertIsNone(bet_id)
+            
+            # Test amount too low
+            success, message, bet_id = await self.game_engine.place_bet(1, 3, 0)
+            
+            self.assertFalse(success)
+            self.assertEqual(message, "Invalid bet amount (1-1000)")
             self.assertIsNone(bet_id)
         
         asyncio.run(run_test())
