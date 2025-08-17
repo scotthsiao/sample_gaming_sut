@@ -1,0 +1,9 @@
+robotframework==6.1.1
+robotframework-requests==0.9.6
+robotframework-jsonlibrary==0.5
+websocket-client==1.6.4
+protobuf>=4.0
+jsonschema==4.19.2
+pyyaml==6.0.1
+pytest==7.4.3
+bcrypt>=3.2

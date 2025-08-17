@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Login Response Schema for Dice Gambling Game",
+  "description": "Schema for validating login response messages from the dice gambling game server",
+  "type": "object",
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Whether the login was successful"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable message about the login result"
+    },
+    "session_token": {
+      "type": "string",
+      "pattern": "^[a-f0-9-]{36}$",
+      "description": "UUID session token for authenticated requests"
+    },
+    "user_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Unique user identifier"
+    },
+    "balance": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "User's current balance in credits"
+    }
+  },
+  "required": ["success", "message"],
+  "if": {
+    "properties": {
+      "success": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": ["session_token", "user_id", "balance"]
+  }
+}

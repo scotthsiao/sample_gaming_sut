@@ -1,0 +1,63 @@
+task:
+  setup: []
+  teardown: []
+
+robot:
+  setup: 
+    - Setup Test Environment
+  teardown: 
+    - Cleanup Test Resources
+
+variables:
+  - data/variables/global_vars.robot
+
+libraries:
+  - Collections
+  - String
+  - DateTime
+  - OperatingSystem
+  - libraries.GameClientLibrary
+  - libraries.TestDataLibrary
+
+resources:
+  - resources/common.robot
+  - resources/test_setup.robot
+  - keywords/connection_keywords.robot
+  - keywords/auth_keywords.robot
+  - keywords/game_keywords.robot
+  - keywords/utility_keywords.robot
+
+output-dir: results/
+log: results/logs/log.html
+report: results/reports/report.html
+debugfile: results/logs/debug.log
+
+test-tags:
+  - smoke
+  - regression
+  - integration
+  - negative
+  - e2e
+
+include:
+  - smoke
+
+exclude:
+  - broken
+  - manual
+  - wip
+
+suite-names:
+  - Connection Tests
+  - Authentication Tests
+  - Game Room Tests
+  - End To End Tests
+
+listener: []
+
+console-colors: auto
+console-width: 80
+max-error-lines: 40
+
+timestampoutputs: true
+splitlog: false

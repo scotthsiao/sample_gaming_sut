@@ -1,0 +1,32 @@
+room_1:
+  room_id: 1
+  name: "Main Room"
+  max_capacity: 50
+  min_bet: 1
+  max_bet: 1000
+  jackpot_pool: 0
+
+room_2:
+  room_id: 2
+  name: "High Stakes Room"
+  max_capacity: 20
+  min_bet: 100
+  max_bet: 1000
+  jackpot_pool: 0
+
+room_3:
+  room_id: 3
+  name: "Beginner Room"
+  max_capacity: 100
+  min_bet: 1
+  max_bet: 50
+  jackpot_pool: 0
+
+# Invalid room for testing
+invalid_room:
+  room_id: 999
+  name: "Non-existent Room"
+  max_capacity: 0
+  min_bet: 0
+  max_bet: 0
+  jackpot_pool: 0

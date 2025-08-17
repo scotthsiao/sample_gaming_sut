@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bet Result Schema for Dice Gambling Game",
+  "description": "Schema for validating bet result responses from the dice gambling game server",
+  "type": "object",
+  "properties": {
+    "dice_result": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "The result of the dice roll (1-6)"
+    },
+    "total_winnings": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total winnings from all bets in the round"
+    },
+    "new_balance": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "User's balance after winnings are applied"
+    },
+    "updated_jackpot": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Updated jackpot pool amount after the round"
+    },
+    "round_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9-]{36}$",
+      "description": "UUID of the completed game round"
+    },
+    "bet_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bet_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$",
+            "description": "UUID of the bet"
+          },
+          "dice_face": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "Dice face that was bet on"
+          },
+          "bet_amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Amount that was bet"
+          },
+          "won": {
+            "type": "boolean",
+            "description": "Whether this bet won"
+          },
+          "payout": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Payout amount for this bet (0 if lost)"
+          }
+        },
+        "required": ["bet_id", "dice_face", "bet_amount", "won", "payout"]
+      },
+      "description": "Results for individual bets in the round"
+    }
+  },
+  "required": ["dice_result", "total_winnings", "new_balance", "updated_jackpot", "round_id"]
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Room Join Response Schema for Dice Gambling Game",
+  "description": "Schema for validating room join response messages from the dice gambling game server",
+  "type": "object",
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Whether joining the room was successful"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable message about the room join result"
+    },
+    "room_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "ID of the room that was joined"
+    },
+    "player_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "Current number of players in the room"
+    },
+    "jackpot_pool": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current jackpot pool amount for the room"
+    }
+  },
+  "required": ["success", "message"],
+  "if": {
+    "properties": {
+      "success": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": ["room_id", "player_count", "jackpot_pool"]
+  }
+}

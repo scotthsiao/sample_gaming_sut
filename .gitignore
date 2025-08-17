@@ -208,3 +208,18 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Robot Framework
+# Generated test reports and logs
+rf_test/output.xml
+rf_test/log.html
+rf_test/report.html
+rf_test/nul.xml
+rf_test/results/
+rf_test/*.xml
+rf_test/*.html
+
+# Robot Framework cache files
+rf_test/.robot_cache/
+rf_test/pabot_results/
+rf_test/selenium-screenshot-*.png

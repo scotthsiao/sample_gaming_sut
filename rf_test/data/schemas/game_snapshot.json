@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Game Snapshot Schema for Dice Gambling Game",
+  "description": "Schema for validating game state snapshot responses from the dice gambling game server",
+  "type": "object",
+  "properties": {
+    "user_balance": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current user balance in credits"
+    },
+    "current_room": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "ID of the room the user is currently in"
+    },
+    "jackpot_pool": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current jackpot pool for the room"
+    },
+    "round_status": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "Current round status: 0=NO_ACTIVE_ROUND, 1=BETTING_PHASE, 2=WAITING_RESULTS"
+    },
+    "active_bets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bet_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$",
+            "description": "UUID of the bet"
+          },
+          "dice_face": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "Dice face bet on (1-6)"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Bet amount in credits"
+          },
+          "round_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$",
+            "description": "UUID of the game round"
+          }
+        },
+        "required": ["bet_id", "dice_face", "amount", "round_id"]
+      },
+      "description": "Array of active bets for the user"
+    }
+  },
+  "required": ["user_balance", "current_room", "jackpot_pool", "round_status"]
+}
