@@ -294,6 +294,18 @@ class GameClientLibrary:
                 error_msg = f"Failed to parse bet placement response: {e}"
                 logger.error(error_msg)
                 raise Exception(error_msg)
+        elif command_id == Commands.S2C_ERROR_RSP:
+            # Parse error response
+            try:
+                error_response = pb.ErrorResponse()
+                error_response.ParseFromString(response_payload)
+                error_msg = f"Bet placement failed with error code: {error_response.error_code}, message: {error_response.error_message}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
+            except Exception as e:
+                error_msg = f"Failed to parse error response: {e}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
         else:
             raise Exception(f"Unexpected response command: {command_id:#x}")
     

@@ -3,7 +3,7 @@
 
 # Server Configuration
 ${SERVER_HOST}          localhost
-${SERVER_PORT}          8765
+${SERVER_PORT}          8767
 ${SERVER_URL}           ws://${SERVER_HOST}:${SERVER_PORT}
 
 # Test Configuration

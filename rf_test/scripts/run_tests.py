@@ -157,8 +157,8 @@ def main():
     
     parser.add_argument(
         "--server-url",
-        default="ws://localhost:8765",
-        help="Dice game server URL (default: ws://localhost:8765)"
+        default="ws://localhost:8767",
+        help="Dice game server URL (default: ws://localhost:8767)"
     )
     
     parser.add_argument(

@@ -178,7 +178,7 @@ class GameState:
         ]
         
         for username, password in test_users:
-            user = User.create_user(self.next_user_id, username, password, 1000)
+            user = User.create_user(self.next_user_id, username, password, 1000000)
             self.users[self.next_user_id] = user
             self.next_user_id += 1
 

@@ -23,7 +23,7 @@ Test Connection With Invalid URL
 Test Connection Timeout
     [Documentation]    Test connection timeout handling
     [Tags]    negative    connection
-    ${timeout_url}=    Set Variable    ws://192.168.1.254:8765
+    ${timeout_url}=    Set Variable    ws://192.168.1.254:8767
     Run Keyword And Expect Error    *Connection failed to server*
     ...    Connect To Game Server    ${timeout_url}    timeout=3
     Log    Connection timeout handled correctly

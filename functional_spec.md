@@ -1,7 +1,7 @@
 # Functional Specification for sample_gaming_sut
 
-**Document Version:** 1.1  
-**Date:** August 16, 2025  
+**Document Version:** 1.2  
+**Date:** August 18, 2025  
 **Project:** Sample Gaming System Under Test  
 **Purpose:** Tutorial and Testing Framework for WebSocket-based Gaming Systems
 
@@ -598,7 +598,7 @@ message ErrorResponse {
 - 1003: Invalid room
 - 1004: Invalid bet parameters
 - 1005: Server error
-- 1006: Rate limit exceeded
+- 1006: Rate limit exceeded (currently disabled for testing)
 
 ---
 
@@ -702,14 +702,16 @@ class GameState:
 
 ### 10.3 Rate Limiting
 
-**Connection Limits:**
-- Maximum 5 connections per IP address
+**Note:** Rate limiting is currently disabled for testing purposes to allow rapid test execution.
+
+**Original Connection Limits (when enabled):**
+- Maximum 5 connections per IP address  
 - Maximum 100 messages per minute per connection
 - Exponential backoff for repeated failed authentication
 
 **Game Limits:**
 - Maximum 10 bets per round
-- Maximum 1 round per second per user
+- Maximum 1 round per second per user (when rate limiting enabled)
 - Maximum bet amount: 1000 credits
 
 ---
@@ -862,7 +864,7 @@ SERVER_CONFIG = {
     'max_connections': 100,
     'session_timeout': 1800,  # 30 minutes
     'room_capacity': 50,
-    'default_balance': 1000,
+    'default_balance': 1000000,
     'max_bet_amount': 1000,
     'min_bet_amount': 1
 }

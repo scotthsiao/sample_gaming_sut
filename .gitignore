@@ -210,7 +210,12 @@ marimo/_lsp/
 __marimo__/
 
 # Robot Framework
-# Generated test reports and logs
+# Generated test reports and logs (both root and rf_test directories)
+output.xml
+log.html
+report.html
+nul.xml
+results/
 rf_test/output.xml
 rf_test/log.html
 rf_test/report.html
@@ -223,3 +228,10 @@ rf_test/*.html
 rf_test/.robot_cache/
 rf_test/pabot_results/
 rf_test/selenium-screenshot-*.png
+robot-*.png
+selenium-screenshot-*.png
+
+# Robot Framework debug files
+debug.log
+.robot_cache/
+pabot_results/

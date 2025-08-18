@@ -2,8 +2,8 @@
 
 # Server Configuration
 server_host: localhost
-server_port: 8765
-server_url: ws://localhost:8765
+server_port: 8767
+server_url: ws://localhost:8767
 protocol: websocket
 
 # Connection Settings

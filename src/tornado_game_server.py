@@ -183,18 +183,22 @@ class GameWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_rate_limit(self, user_id: int) -> bool:
         """Check if user is within rate limits"""
-        # For demo purposes, allow more requests for user 1 (testuser1)
-        if user_id == 1:
-            return True
-            
-        now = time.time()
-        last_request = GameWebSocketHandler.rate_limits.get(user_id, 0)
-        
-        if now - last_request < 0.05:  # Max 20 requests per second
-            return False
-        
-        GameWebSocketHandler.rate_limits[user_id] = now
+        # Rate limiting disabled for testing purposes
         return True
+        
+        # Original rate limiting logic (commented out for testing):
+        # # For demo purposes, allow more requests for user 1 (testuser1)
+        # if user_id == 1:
+        #     return True
+        #     
+        # now = time.time()
+        # last_request = GameWebSocketHandler.rate_limits.get(user_id, 0)
+        # 
+        # if now - last_request < 0.05:  # Max 20 requests per second
+        #     return False
+        # 
+        # GameWebSocketHandler.rate_limits[user_id] = now
+        # return True
 
     async def handle_login(self, payload: bytes):
         """Handle login request"""

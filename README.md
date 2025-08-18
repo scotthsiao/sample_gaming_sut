@@ -9,7 +9,7 @@ A real-time WebSocket-based dice gambling game system implemented in Python with
 - **Secure Authentication**: bcrypt password hashing and session management
 - **Multi-room Support**: Join different game rooms with individual jackpot pools
 - **Dice Gambling**: Place bets on six-sided dice outcomes with 6x payouts
-- **Rate Limiting**: Built-in protection against spam and abuse
+- **Rate Limiting**: Built-in protection against spam and abuse (disabled for testing)
 - **Comprehensive Testing**: Full test suite covering all components
 
 ## System Architecture
@@ -141,7 +141,7 @@ python run_client.py --server ws://localhost:8765 --demo
 - Minimum bet: $1
 - Maximum bet: $1000
 - Maximum 10 bets per round
-- Players start with $1000 balance
+- Players start with $1,000,000 balance
 
 ### Game Flow
 
@@ -194,7 +194,7 @@ GAME_SESSION_TIMEOUT=1800
 GAME_MAX_BETS_PER_ROUND=10
 GAME_MIN_BET=1
 GAME_MAX_BET=1000
-GAME_DEFAULT_BALANCE=1000
+GAME_DEFAULT_BALANCE=1000000
 
 # Client configuration
 GAME_SERVER_URL=ws://localhost:8767
@@ -259,7 +259,7 @@ pip install -e .[dev]
 
 - **Password Hashing**: bcrypt with 12 rounds
 - **Session Management**: UUID-based tokens with expiration
-- **Rate Limiting**: 100 messages per minute per user
+- **Rate Limiting**: Configurable protection (currently disabled for testing)
 - **Input Validation**: Comprehensive validation of all user inputs
 - **Connection Management**: Automatic cleanup of stale connections
 
@@ -269,6 +269,44 @@ pip install -e .[dev]
 - **Error Tracking**: Comprehensive error handling and reporting
 - **Performance Monitoring**: Connection and game state metrics
 - **Cleanup Tasks**: Automatic cleanup of expired sessions and stale rounds
+
+## Testing
+
+### Test Configuration Changes
+
+Recent improvements have been made to enhance testing capabilities:
+
+- **Rate Limiting Disabled**: For rapid testing scenarios without delays
+- **Enhanced Balance**: Users start with $1,000,000 for extensive testing
+- **Error Handling**: Improved error response handling in test framework
+- **Port Configuration**: Updated to use port 8767 by default
+
+### Robot Framework Tests
+
+The system includes comprehensive Robot Framework tests located in the `rf_test/` directory:
+
+```bash
+# Run all tests
+cd rf_test
+robot tests/
+
+# Run specific test suites
+robot tests/connection_tests.robot
+robot tests/authentication_tests.robot  
+robot tests/game_room_tests.robot
+robot tests/end_to_end_tests.robot
+
+# Run tests with specific tags
+robot --include smoke tests/
+robot --include e2e tests/
+```
+
+### Test Coverage
+
+- **Connection Tests**: WebSocket connectivity and error handling
+- **Authentication Tests**: User login and session management  
+- **Game Room Tests**: Room joining and state management
+- **End-to-End Tests**: Complete game workflows and multiple bet scenarios
 
 ## Production Deployment
 

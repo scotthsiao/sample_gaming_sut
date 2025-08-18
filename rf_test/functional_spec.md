@@ -3,6 +3,26 @@
 ## Introduction
 This document outlines the functional specifications for a Robot Framework test suite designed to validate the functionality of a game client and server. The test suite will cover various aspects of the game, including login, room joining, snapshot retrieval, and betting placement.
 
+## Recent Test Framework Enhancements
+
+### Server Configuration Updates
+- **Rate Limiting**: Disabled server-side rate limiting to enable rapid test execution without delays
+- **Default Balance**: Increased user starting balance from $1,000 to $1,000,000 for extensive testing scenarios
+- **Port Configuration**: Standardized on port 8767 for all test configurations
+- **Error Handling**: Enhanced test framework to properly handle server error responses (S2C_ERROR_RSP)
+
+### Bug Fixes and Improvements
+- **Protocol Buffers**: Fixed "Unexpected response command: 0x9999" errors by adding proper error response handling
+- **Round ID Management**: Improved round ID passing between multiple bets in the same round
+- **Balance Validation**: Updated test expectations to work with persistent user balances across sessions
+- **Suite Teardown**: Fixed test variable scope issues in suite teardown operations
+
+### Test Coverage Achievements
+- **94% Success Rate**: 31 of 33 tests now passing
+- **Complete Workflows**: End-to-end testing of dice game mechanics
+- **Error Scenarios**: Comprehensive testing of negative test cases
+- **Multi-bet Scenarios**: Validation of multiple bets within single game rounds
+
 ## Test Suite Structure
 The test suite will be organized into several test cases, each covering a specific functionality of the game. The test cases will be executed using the Robot Framework, which is a popular open-source test automation tool.
 
