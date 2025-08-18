@@ -56,6 +56,20 @@ class GameClientLibrary:
     def connect_to_game_server(self, server_url: str, timeout: int = 10) -> bool:
         """Establish WebSocket connection to the dice gambling game server."""
         logger.info(f"Connecting to game server: {server_url}")
+        
+        # Always disconnect first - be aggressive about cleanup
+        logger.info("Cleaning up any existing connection state")
+        try:
+            self.client.disconnect()
+            # Give it a moment to clean up
+            import time
+            time.sleep(0.5)
+        except Exception as e:
+            logger.info(f"Cleanup during disconnect: {e}")
+        
+        # Clear session data to start fresh
+        self._clear_session_data()
+        
         success = self.client.connect(server_url, timeout)
         if success:
             logger.info("Successfully connected to game server")
@@ -243,9 +257,24 @@ class GameClientLibrary:
         if amount > self.user_balance:
             raise Exception("Insufficient balance for bet")
         
-        # Store round_id if provided for subsequent bets
+        # Handle round ID management
         if round_id:
+            # Use provided round_id for subsequent bets in same round
             self.active_round_id = round_id
+        else:
+            # Starting a new bet without round_id - ensure any previous round is cleaned up
+            if self.active_round_id:
+                try:
+                    logger.info(f"Auto-cleaning previous active round: {self.active_round_id}")
+                    self.finish_betting(self.active_round_id)
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if any(phrase in error_msg for phrase in ["not in betting phase", "already finished", "already processed", "round not found"]):
+                        logger.info(f"Round {self.active_round_id} already finished/processed during auto-cleanup")
+                    else:
+                        logger.warn(f"Failed to auto-clean round {self.active_round_id}: {e}")
+                finally:
+                    self.active_round_id = None
         
         logger.info(f"Placing bet: {amount} on dice face {dice_face}")
         
@@ -362,7 +391,7 @@ class GameClientLibrary:
         if not round_id:
             raise Exception("No active round to get result for")
         
-        logger.info(f"Getting game result for round: {round_id}")
+        logger.info(f"Getting game result for round: {round_id} (active_round_id: {self.active_round_id})")
         
         # Create Protocol Buffers result request
         result_request = pb.ReckonResultRequest()
@@ -401,6 +430,46 @@ class GameClientLibrary:
             raise Exception(f"Unexpected response command: {command_id:#x}")
     
     @keyword
+    def cleanup_active_round(self) -> bool:
+        """Clean up any active round by finishing betting if needed."""
+        if not self.active_round_id:
+            logger.info("No active round to clean up")
+            return True
+            
+        try:
+            logger.info(f"Cleaning up active round: {self.active_round_id}")
+            # Try to finish the current round if it exists
+            result = self.finish_betting(self.active_round_id)
+            # Clear the active round regardless of success
+            self.active_round_id = None
+            logger.info("Active round cleaned up successfully")
+            return True
+        except Exception as e:
+            # Log but don't fail - rounds may already be finished
+            error_msg = str(e).lower()
+            if any(phrase in error_msg for phrase in ["not in betting phase", "already finished", "already processed", "round not found"]):
+                logger.info(f"Round {self.active_round_id} already finished/processed during cleanup")
+            else:
+                logger.warn(f"Error cleaning up round {self.active_round_id}: {e}")
+            self.active_round_id = None
+            return True
+    
+    @keyword
+    def reset_client_state(self) -> bool:
+        """Reset all client state variables."""
+        try:
+            self.session_token = None
+            self.user_id = None
+            self.current_room = None
+            self.user_balance = 0
+            self.active_round_id = None
+            logger.info("Client state reset successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error resetting client state: {e}")
+            return False
+
+    @keyword
     def get_connection_status(self) -> bool:
         """Check if connection is active."""
         return self.client.connected
@@ -427,3 +496,20 @@ class GameClientLibrary:
         self.current_room = None
         self.user_balance = 0
         self.active_round_id = None
+    
+    def _ensure_connection(self) -> bool:
+        """Ensure connection is healthy, with basic checks only."""
+        # Only do basic connection check - don't be overly strict
+        if not self.client.connected:
+            logger.info("Connection check failed - client reports disconnected")
+            return False
+        
+        # Basic WebSocket object check
+        if not hasattr(self.client, 'ws') or self.client.ws is None:
+            logger.info("Connection check failed - WebSocket object is None")
+            self.client.connected = False
+            return False
+        
+        # If basic checks pass, assume connection is good
+        # Don't do deep socket inspection as it may give false negatives
+        return True

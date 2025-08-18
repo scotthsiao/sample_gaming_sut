@@ -21,6 +21,21 @@ class ProtocolClient:
     def connect(self, url: str, timeout: int = 10) -> bool:
         """Connect to the gaming server."""
         try:
+            # Clean up any existing connection first
+            if self.ws is not None:
+                self.logger.info("Cleaning up existing WebSocket connection")
+                try:
+                    self.ws.close()
+                except:
+                    pass  # Ignore errors during cleanup
+                self.ws = None
+                self.connected = False
+                time.sleep(0.2)  # Brief pause for cleanup
+            
+            # Clear message queue for fresh start
+            with self._lock:
+                self.message_queue.clear()
+            
             self.url = url
             self.ws = websocket.WebSocketApp(
                 url,
@@ -47,13 +62,20 @@ class ProtocolClient:
     def disconnect(self):
         """Disconnect from server."""
         if self.ws:
-            self.ws.close()
-            self.connected = False
+            try:
+                self.ws.close()
+            except:
+                pass  # Ignore errors during close
+            self.ws = None
+        self.connected = False
+        # Clear message queue on disconnect
+        with self._lock:
+            self.message_queue.clear()
     
     def send_packet(self, command_id: int, payload: bytes) -> bool:
         """Send a packet with command ID, length, and payload."""
-        if not self.connected:
-            self.logger.error("Not connected to server")
+        if not self.connected or self.ws is None:
+            self.logger.error(f"Cannot send packet {command_id:#x} - not connected to server")
             return False
         
         try:
@@ -65,7 +87,9 @@ class ProtocolClient:
             self.logger.debug(f"Sent packet: command_id={command_id:#x}, length={length}")
             return True
         except Exception as e:
-            self.logger.error(f"Send packet failed: {e}")
+            self.logger.error(f"Send packet {command_id:#x} failed: {e}")
+            # Mark as disconnected if send fails
+            self.connected = False
             return False
     
     def wait_for_packet(self, timeout: int = 5) -> Optional[Tuple[int, bytes]]:

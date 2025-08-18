@@ -36,6 +36,17 @@ Cleanup Test Resources
     
     Log    Cleaning up dice game test resources
     
+    # Clean up active rounds first (multiple attempts)
+    FOR    ${i}    IN RANGE    3
+        ${status}    ${result}=    Run Keyword And Ignore Error    Cleanup Active Round
+        Run Keyword If    '${status}' == 'PASS'    Log    Active round cleanup attempt ${i+1} successful
+        Exit For Loop If    '${status}' == 'PASS'
+    END
+    
+    # Reset client state
+    ${status}    ${result}=    Run Keyword And Ignore Error    Reset Client State
+    Run Keyword If    '${status}' == 'PASS'    Log    Client state reset
+    
     # Close server connection if active
     ${status}    ${result}=    Run Keyword And Ignore Error    Close Server Connection
     Run Keyword If    '${status}' == 'PASS'    Log    Connection closed during cleanup
