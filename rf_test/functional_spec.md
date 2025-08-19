@@ -205,19 +205,10 @@ rf_test/
 
 
 │
-├── data/                               # Test data and configuration
-│   ├── variables/                      # Variable files
-│   │   ├── global_vars.robot          # Global variables
-│   │   ├── dev_config.robot           # Development environment
-│   │   ├── staging_config.robot       # Staging environment
-│   │   └── prod_config.robot          # Production environment
-│   │
-│   ├── test_data/                      # Test data files
-│   │   ├── users.yaml                 # User credentials
-│   │   ├── rooms.yaml                 # Game room data
-│   │   ├── bet_types.yaml            # Betting options
-│   │   └── test_scenarios.yaml        # Test scenario data
-│   │
+├── data/                               # Test configuration
+│   └── variables/                      # Variable files
+│       └── global_vars.robot          # Global variables and configuration
+│
 
 │
 ├── resources/                          # Resource files

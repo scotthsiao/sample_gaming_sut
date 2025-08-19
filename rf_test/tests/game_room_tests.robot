@@ -2,7 +2,7 @@
 Documentation    Dice game room functionality test cases
 Test Setup       Setup Game Room Test
 Test Teardown    Cleanup Test Resources
-Resource         ../resources/common.robot
+Resource         ../common_keywords.robot
 
 *** Test Cases ***
 Test Join Default Room

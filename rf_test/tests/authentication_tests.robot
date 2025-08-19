@@ -2,7 +2,7 @@
 Documentation    Authentication test cases for dice gambling game
 Test Setup       Setup Authentication Test
 Test Teardown    Cleanup Test Resources
-Resource         ../resources/common.robot
+Resource         ../common_keywords.robot
 
 *** Test Cases ***
 Test Successful Login

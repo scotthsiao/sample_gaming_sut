@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation    Authentication keywords for dice gambling game
 Library          ../libraries/GameClientLibrary.py
-Library          ../libraries/TestDataLibrary.py
+# Library          ../libraries/TestDataLibrary.py  # Replaced with native Robot Framework resources
 Library          Collections
 
 *** Keywords ***

@@ -7,7 +7,7 @@ from robot.api import logger
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils.protocol_client import ProtocolClient
+from protocol_client import ProtocolClient
 
 # Import Protocol Buffers messages
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))

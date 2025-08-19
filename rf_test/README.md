@@ -59,19 +59,10 @@ rf_test/
 
 
 │
-├── data/                               # Test data and configuration
-│   ├── variables/                      # Variable files
-│   │   ├── global_vars.robot          # Global variables
-│   │   ├── dev_config.robot           # Development environment
-│   │   ├── staging_config.robot       # Staging environment
-│   │   └── prod_config.robot          # Production environment
-│   │
-│   ├── test_data/                      # Test data files
-│   │   ├── users.yaml                 # User credentials
-│   │   ├── rooms.yaml                 # Game room data
-│   │   ├── bet_types.yaml            # Betting options
-│   │   └── test_scenarios.yaml        # Test scenario data
-│   │
+├── data/                               # Test configuration
+│   └── variables/                      # Variable files
+│       └── global_vars.robot          # Global variables and configuration
+│
 
 │
 ├── resources/                          # Resource files
@@ -195,20 +186,16 @@ ${SERVER_URL}           ws://${SERVER_HOST}:${SERVER_PORT}
 ```
 
 ### Test Users
-Edit `data/test_data/users.yaml`:
-```yaml
-default:
-  username: "testuser"
-  password: "testpass123"
-  expected_balance: 1000000
-  user_type: "standard"
-```
+Test users are now hardcoded in `libraries/TestDataLibrary.py`:
+- **default**: testuser1/password123 (standard user)
+- **high_roller**: alice/alicepass (premium user)  
+- **basic_user**: bob/bobpass (basic user)
 
-### Environment Variables
-Set environment-specific variables:
-```bash
-export SERVER_URL="ws://localhost:8767"
-export TEST_ENV="dev"
+### Configuration
+The test suite uses a single server configuration defined in `data/variables/global_vars.robot`:
+- Server URL: `ws://localhost:8767`
+- Default balance: 1,000,000 credits
+- Connection timeout: 10 seconds
 ```
 
 ## 📊 Running Tests
@@ -233,8 +220,8 @@ python scripts/run_tests.py --server-url ws://staging.example.com:8767
 # Install dependencies and run tests
 python scripts/run_tests.py --install-deps
 
-# Run tests for specific environment
-python scripts/run_tests.py --env staging
+# Run all tests
+python scripts/run_tests.py
 
 # Custom output directory
 python scripts/run_tests.py --output-dir /path/to/results
@@ -336,10 +323,10 @@ Log    Debug checkpoint reached
 4. Include usage examples
 
 ### Test Data Management
-1. Add test data to `data/test_data/`
-2. Use YAML format for structured data
-3. Update schemas in `data/schemas/` if needed
-4. Validate data integrity
+Test data is now hardcoded in `TestDataLibrary.py` for simplicity:
+1. Edit user credentials directly in the library file
+2. Modify room configurations in the `rooms` dictionary
+3. No external files needed - everything is in code
 
 ## 📋 Best Practices
 
@@ -358,7 +345,7 @@ Log    Debug checkpoint reached
 ### Data Management
 - Use external data files for test inputs
 - Implement data validation
-- Support multiple environments
+- Use centralized configuration
 - Keep sensitive data separate
 
 ## 🐛 Troubleshooting

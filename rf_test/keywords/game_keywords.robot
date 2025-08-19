@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation    Dice gambling game operation keywords
 Library          ../libraries/GameClientLibrary.py
-Library          ../libraries/TestDataLibrary.py
+# Library          ../libraries/TestDataLibrary.py  # Replaced with native Robot Framework resources
 Library          Collections
 
 *** Keywords ***
@@ -54,9 +54,8 @@ Place Valid Dice Bet
 
 Place Random Dice Bet
     [Documentation]    Place a bet with random dice face and amount
-    ${bet_data}=    Get Test Scenario    complete_dice_game
     ${dice_face}=    Evaluate    random.randint(1, 6)    random
-    ${amount}=    Set Variable    ${bet_data}[bet_amount]
+    ${amount}=    Evaluate    random.randint(1, 100)    random
     ${result}=    Place Valid Dice Bet    ${dice_face}    ${amount}
     Log    Random dice bet placed: face ${dice_face} for ${amount}
     RETURN    ${result}

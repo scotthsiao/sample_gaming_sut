@@ -1,28 +1,77 @@
 *** Settings ***
-Documentation    Test setup and teardown procedures for dice gambling game tests
+Documentation    Common resource file with shared imports and keywords for dice gambling game tests
+
+# Variable imports
+Resource         data/variables/global_vars.robot
+
+# Library imports
+Library          Collections
+Library          String
+Library          DateTime
+Library          OperatingSystem
+Library          libraries/GameClientLibrary.py
+
+# Keyword resource imports
+Resource         keywords/auth_keywords.robot
+Resource         keywords/game_keywords.robot
+Resource         keywords/utility_keywords.robot
+
+*** Variables ***
+# Test execution variables
+${TEST_START_TIME}    ${EMPTY}
 
 *** Keywords ***
+Initialize Test Suite
+    [Documentation]    Initialize test suite with common setup
+    ${start_time}=    Get Current Date    result_format=%Y-%m-%d %H:%M:%S
+    Set Suite Variable    ${TEST_START_TIME}    ${start_time}
+    Log    Dice gambling game test suite initialized at: ${start_time}
+    
+    # Verify test data integrity
+    Verify Test Data Integrity
+    
+    # Log configuration
+    Log Configuration
+
+Log Configuration
+    [Documentation]    Log current test configuration
+    Log    Server URL: ${SERVER_URL}
+    Log    Connection timeout: ${CONNECTION_TIMEOUT}s
+    Log    Default balance: ${DEFAULT_BALANCE}
+
+Common Test Setup
+    [Documentation]    Common setup for individual dice game tests
+    Log    Starting dice gambling game test: ${TEST_NAME}
+    
+    # Verify test prerequisites
+    Should Not Be Empty    ${SERVER_URL}    Server URL not configured
+    
+    # Clear any previous test state
+    Clear Test Variables
+
+Common Test Teardown
+    [Documentation]    Common teardown for individual dice game tests
+    Log    Completing dice gambling game test: ${TEST_NAME}
+    
+    # Clean up connections and sessions
+    Run Keyword And Ignore Error    Close Server Connection
+    
+    # Log test completion
+    ${end_time}=    Get Current Date    result_format=%H:%M:%S
+    Log    Test completed at: ${end_time}
+
+# Test Setup and Teardown Keywords - consolidated from test_setup.robot
 Setup Test Environment
     [Documentation]    Setup test environment for dice game test execution
     [Arguments]    ${env_name}=dev
     
     Log    Setting up dice game test environment: ${env_name}
     
-    # Load environment configuration
-    ${config}=    Get Environment Config    ${env_name}
-    Set Test Variable    ${TEST_CONFIG}    ${config}
+    # Use simplified configuration - just set the server URL directly
+    Set Test Variable    ${SERVER_URL}    ws://localhost:8767
+    Set Test Variable    ${TIMEOUT}       60
     
-    # Set server URL based on environment
-    ${server_url}=    Set Variable If
-    ...    '${env_name}' == 'dev'        ws://${config}[server_host]:${config}[server_port]
-    ...    '${env_name}' == 'staging'    wss://${config}[server_host]:${config}[server_port]
-    ...    '${env_name}' == 'prod'       wss://${config}[server_host]:${config}[server_port]
-    ...    ws://localhost:8767
-    
-    Set Test Variable    ${SERVER_URL}    ${server_url}
-    Set Test Variable    ${TIMEOUT}       ${config}[timeout]
-    
-    # Initialize test tracking
+    # Initialize test tracking (now using native Robot Framework keyword)
     ${test_id}=    Generate Random Username    test
     Set Test Variable    ${TEST_ID}    ${test_id}
     
@@ -51,10 +100,7 @@ Cleanup Test Resources
     ${status}    ${result}=    Run Keyword And Ignore Error    Close Server Connection
     Run Keyword If    '${status}' == 'PASS'    Log    Connection closed during cleanup
     
-    # Clear cached data
-    Clear Cached Data
-    
-    # Clear test variables
+    # Clear test variables (no cached data to clear in simplified library)
     Clear Test Variables
     
     Log    Dice game test resources cleanup complete
@@ -68,10 +114,7 @@ Suite Teardown
     ${status}    ${result}=    Run Keyword And Ignore Error    Close Server Connection
     Run Keyword If    '${status}' == 'PASS'    Log    Connection closed during suite cleanup
     
-    # Clear cached data
-    Clear Cached Data
-    
-    # Note: Cannot clear test variables during suite teardown
+    # Note: No cached data to clear in simplified library
     Log    Dice game test suite cleanup complete
 
 Setup Dice Game Test Environment

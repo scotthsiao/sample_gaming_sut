@@ -2,7 +2,7 @@
 Documentation    End-to-end test cases for complete dice gambling game workflows
 Test Setup       Setup Test Environment
 Test Teardown    Cleanup Test Resources
-Resource         ../resources/common.robot
+Resource         ../common_keywords.robot
 
 *** Test Cases ***
 Test Complete Dice Game Workflow
