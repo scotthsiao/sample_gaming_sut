@@ -203,7 +203,7 @@ rf_test/
 │   └── utils/                         # Utility modules
 │       ├── __init__.py
 
-│       └── json_validator.py          # JSON validation helpers
+
 │
 ├── data/                               # Test data and configuration
 │   ├── variables/                      # Variable files
@@ -218,10 +218,7 @@ rf_test/
 │   │   ├── bet_types.yaml            # Betting options
 │   │   └── test_scenarios.yaml        # Test scenario data
 │   │
-│   └── schemas/                        # JSON schemas for validation
-│       ├── login_response.json        # Login response schema
-│       ├── room_join_response.json    # Room join response schema
-│       └── game_snapshot.json         # Game snapshot schema
+
 │
 ├── resources/                          # Resource files
 │   ├── common.robot                   # Common resource imports

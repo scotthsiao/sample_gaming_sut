@@ -139,10 +139,7 @@ def validate_test_data():
         "data/test_data/rooms.yaml", 
         "data/test_data/bet_types.yaml",
         "data/test_data/test_scenarios.yaml",
-        "data/variables/global_vars.robot",
-        "data/schemas/login_response.json",
-        "data/schemas/room_join_response.json",
-        "data/schemas/game_snapshot.json"
+        "data/variables/global_vars.robot"
     ]
     
     all_valid = True
