@@ -56,7 +56,7 @@ rf_test/
 │   └── utils/                         # Utility modules
 │       ├── __init__.py
 │       ├── protocol_client.py         # Protocol Buffers client
-│       ├── websocket_client.py        # WebSocket client utilities
+
 │       └── json_validator.py          # JSON validation helpers
 │
 ├── data/                               # Test data and configuration

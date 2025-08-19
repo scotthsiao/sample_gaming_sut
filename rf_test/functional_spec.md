@@ -202,7 +202,7 @@ rf_test/
 │   ├── TestDataLibrary.py             # Test data management
 │   └── utils/                         # Utility modules
 │       ├── __init__.py
-│       ├── websocket_client.py        # WebSocket client utilities
+
 │       └── json_validator.py          # JSON validation helpers
 │
 ├── data/                               # Test data and configuration

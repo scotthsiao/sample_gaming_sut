@@ -23,14 +23,8 @@ Test Complete Dice Game Workflow
     ${snapshot}=    Retrieve Game State
     ${initial_balance}=    Set Variable    ${snapshot}[user_balance]
     
-    # Step 5: Place dice bet
-    ${bet_result}=    Place Valid Dice Bet    3    10
-    
-    # Step 6: Finish betting
-    ${finish_result}=    Finish Current Betting Round    ${bet_result}[round_id]
-    
-    # Step 7: Get game result
-    ${game_result}=    Get Dice Game Result    ${bet_result}[round_id]
+    # Step 5: Perform full game round
+    ${game_result}=    Perform Full Game Round    3    10
     
     # Step 8: Verify game logic
     Should Be True    1 <= ${game_result}[dice_result] <= 6

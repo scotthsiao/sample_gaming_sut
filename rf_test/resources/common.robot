@@ -40,14 +40,7 @@ Initialize Test Suite
 Set Environment Variables
     [Documentation]    Set variables based on test environment
     ${env}=    Get Variable Value    ${TEST_ENV}    dev
-    
-    Run Keyword If    '${env}' == 'dev'
-    ...    Set Suite Variable    ${SERVER_URL}    ws://localhost:8767
-    ...    ELSE IF    '${env}' == 'staging'
-    ...    Set Suite Variable    ${SERVER_URL}    wss://staging.gameserver.com:8767
-    ...    ELSE IF    '${env}' == 'prod'
-    ...    Set Suite Variable    ${SERVER_URL}    wss://prod.gameserver.com:8767
-    
+    Import Resource    ../data/variables/${env}_config.robot
     Log    Environment set to: ${env}
     Log    Server URL: ${SERVER_URL}
 

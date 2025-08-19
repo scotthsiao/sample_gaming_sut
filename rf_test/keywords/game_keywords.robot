@@ -121,3 +121,11 @@ Verify Dice Game Balance
     ${current_balance}=    Get User Balance
     Should Be Equal As Numbers    ${current_balance}    ${expected_balance}
     Log    Balance verified: ${current_balance}
+
+Perform Full Game Round
+    [Documentation]    Perform a full game round including placing a bet, finishing the round and getting the result.
+    [Arguments]    ${dice_face}    ${bet_amount}
+    ${bet_result}=    Place Valid Dice Bet    ${dice_face}    ${bet_amount}
+    Finish Current Betting Round    ${bet_result}[round_id]
+    ${game_result}=    Get Dice Game Result    ${bet_result}[round_id]
+    [Return]    ${game_result}

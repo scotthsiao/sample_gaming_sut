@@ -43,7 +43,10 @@ class GameClientLibrary:
     """Robot Framework library for testing the dice gambling game system."""
     
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
-    
+    DEFAULT_TIMEOUT = 10
+    DICE_FACE_RANGE = (1, 6)
+    BET_AMOUNT_RANGE = (1, 1000)
+
     def __init__(self):
         self.client = ProtocolClient()
         self.session_token = None
@@ -53,7 +56,7 @@ class GameClientLibrary:
         self.active_round_id = None
         
     @keyword
-    def connect_to_game_server(self, server_url: str, timeout: int = 10) -> bool:
+    def connect_to_game_server(self, server_url: str, timeout: int = DEFAULT_TIMEOUT) -> bool:
         """Establish WebSocket connection to the dice gambling game server."""
         logger.info(f"Connecting to game server: {server_url}")
         
@@ -102,7 +105,7 @@ class GameClientLibrary:
             raise Exception("Failed to send login request")
         
         # Wait for response
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for login")
         
@@ -168,7 +171,7 @@ class GameClientLibrary:
         if not self.client.send_packet(Commands.C2S_ROOM_JOIN_REQ, payload):
             raise Exception("Failed to send room join request")
         
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for room join")
         
@@ -215,7 +218,7 @@ class GameClientLibrary:
         if not self.client.send_packet(Commands.C2S_SNAPSHOT_REQ, payload):
             raise Exception("Failed to send snapshot request")
         
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for snapshot")
         
@@ -241,40 +244,41 @@ class GameClientLibrary:
                 raise Exception(error_msg)
         else:
             raise Exception(f"Unexpected response command: {command_id:#x}")
-    
+
+    def _validate_bet(self, dice_face: int, amount: int):
+        """Validate bet parameters."""
+        if not (self.DICE_FACE_RANGE[0] <= dice_face <= self.DICE_FACE_RANGE[1]):
+            raise ValueError(f"Dice face must be between {self.DICE_FACE_RANGE[0]} and {self.DICE_FACE_RANGE[1]}")
+        if not (self.BET_AMOUNT_RANGE[0] <= amount <= self.BET_AMOUNT_RANGE[1]):
+            raise ValueError(f"Bet amount must be between {self.BET_AMOUNT_RANGE[0]} and {self.BET_AMOUNT_RANGE[1]}")
+        if amount > self.user_balance:
+            raise ValueError("Insufficient balance for bet")
+
+    def _manage_bet_round(self, round_id: Optional[str]):
+        """Manage the active betting round."""
+        if round_id:
+            self.active_round_id = round_id
+        elif self.active_round_id:
+            try:
+                logger.info(f"Auto-cleaning previous active round: {self.active_round_id}")
+                self.finish_betting(self.active_round_id)
+            except Exception as e:
+                error_msg = str(e).lower()
+                if any(phrase in error_msg for phrase in ["not in betting phase", "already finished", "already processed", "round not found"]):
+                    logger.info(f"Round {self.active_round_id} already finished/processed during auto-cleanup")
+                else:
+                    logger.warn(f"Failed to auto-clean round {self.active_round_id}: {e}")
+            finally:
+                self.active_round_id = None
+
     @keyword
     def place_bet(self, dice_face: int, amount: int, round_id: str = None) -> Dict[str, Any]:
         """Place a bet on dice outcome."""
         if not self.session_token or not self.current_room:
             raise Exception("User must be logged in and in a room")
-        
-        if not (1 <= dice_face <= 6):
-            raise Exception("Dice face must be between 1 and 6")
-        
-        if not (1 <= amount <= 1000):
-            raise Exception("Bet amount must be between 1 and 1000")
-        
-        if amount > self.user_balance:
-            raise Exception("Insufficient balance for bet")
-        
-        # Handle round ID management
-        if round_id:
-            # Use provided round_id for subsequent bets in same round
-            self.active_round_id = round_id
-        else:
-            # Starting a new bet without round_id - ensure any previous round is cleaned up
-            if self.active_round_id:
-                try:
-                    logger.info(f"Auto-cleaning previous active round: {self.active_round_id}")
-                    self.finish_betting(self.active_round_id)
-                except Exception as e:
-                    error_msg = str(e).lower()
-                    if any(phrase in error_msg for phrase in ["not in betting phase", "already finished", "already processed", "round not found"]):
-                        logger.info(f"Round {self.active_round_id} already finished/processed during auto-cleanup")
-                    else:
-                        logger.warn(f"Failed to auto-clean round {self.active_round_id}: {e}")
-                finally:
-                    self.active_round_id = None
+
+        self._validate_bet(dice_face, amount)
+        self._manage_bet_round(round_id)
         
         logger.info(f"Placing bet: {amount} on dice face {dice_face}")
         
@@ -289,7 +293,7 @@ class GameClientLibrary:
         if not self.client.send_packet(Commands.C2S_BET_PLACEMENT_REQ, payload):
             raise Exception("Failed to send bet placement request")
         
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for bet placement")
         
@@ -357,7 +361,7 @@ class GameClientLibrary:
         if not self.client.send_packet(Commands.C2S_BET_FINISHED_REQ, payload):
             raise Exception("Failed to send bet finished request")
         
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for bet finished")
         
@@ -401,7 +405,7 @@ class GameClientLibrary:
         if not self.client.send_packet(Commands.C2S_RECKON_RESULT_REQ, payload):
             raise Exception("Failed to send result request")
         
-        response = self.client.wait_for_packet(timeout=10)
+        response = self.client.wait_for_packet(timeout=self.DEFAULT_TIMEOUT)
         if not response:
             raise Exception("No response received for game result")
         
