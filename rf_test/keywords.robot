@@ -164,8 +164,6 @@ Get User Credentials
         RETURN    &{HIGH_ROLLER_USER}
     ELSE IF    '${user_type}' == 'basic_user'
         RETURN    &{BASIC_USER_DATA}
-    ELSE IF    '${user_type}' == 'admin_user'
-        RETURN    &{ADMIN_USER_DATA}
     ELSE
         Fail    User type '${user_type}' not found
     END

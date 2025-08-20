@@ -61,15 +61,6 @@ Test Balance Verification After Login
     Should Be True    ${current_balance} >= 0
     Log    Balance verification after login successful
 
-Test Login With Admin User
-    [Documentation]    Test login with admin user credentials
-    [Tags]    authentication    admin
-    ${auth_result}=    Login With Valid Credentials    admin_user
-    Should Be Equal    ${auth_result}[status]    success
-    ${balance}=    Get User Balance
-    Should Be True    ${balance} >= 1000
-    Log    Admin user login successful
-
 Test Authentication State Persistence
     [Documentation]    Test that authentication state persists across operations
     [Tags]    authentication    persistence

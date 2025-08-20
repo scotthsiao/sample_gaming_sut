@@ -1,6 +1,6 @@
 # Dice Gambling Game - Ultra-Compact Robot Framework Test Suite
 
-A minimalist Robot Framework test suite for testing the WebSocket-based dice gambling game system. This test suite has been ultra-compacted for beginner tutorials while maintaining 100% test coverage (33/33 tests passing).
+A minimalist Robot Framework test suite for testing the WebSocket-based dice gambling game system. This test suite has been ultra-compacted for beginner tutorials while maintaining 100% test coverage (32/32 tests passing).
 
 ## 🎯 Overview
 
@@ -22,7 +22,7 @@ This ultra-simplified test suite validates a dice gambling game that uses:
 - **Beginner Friendly**: Perfect for Robot Framework tutorials
 
 ### Test Coverage Maintained  
-- **33 of 33 tests passing** (100% success rate)
+- **32 of 32 tests passing** (100% success rate)
 - **Complete Protocol Buffers validation** for all message types
 - **Multi-bet scenario testing** with proper round ID management
 - **Real-time balance persistence** validation across sessions
@@ -39,7 +39,7 @@ rf_test/
 │
 ├── tests/                              # Test suite files (4 files)
 │   ├── connection_tests.robot          # WebSocket connection tests (7 tests)
-│   ├── authentication_tests.robot     # Login/logout tests (8 tests)
+│   ├── authentication_tests.robot     # Login/logout tests (7 tests)
 │   ├── game_room_tests.robot          # Room joining tests (10 tests)
 │   ├── end_to_end_tests.robot         # Complete workflow tests (8 tests)
 │   └── __init__.robot                 # Test suite initialization
@@ -99,7 +99,7 @@ rf_test/
 | Test Multiple Connection Attempts | `retry`, `connection` | Test connection retry mechanism |
 | Test Connection During Server Unavailable | `negative`, `connection` | Test behavior when server unavailable |
 
-### Authentication Tests (8 tests)
+### Authentication Tests (7 tests)
 | Test Case | Tags | Description |
 |-----------|------|-------------|
 | Test Successful Login | `smoke`, `authentication` | Test successful user authentication |
@@ -108,7 +108,6 @@ rf_test/
 | Test Multiple User Types Login | `authentication`, `user_types` | Test login with different user types |
 | Test Session Token Validation | `authentication`, `session` | Test session token validation |
 | Test Balance Verification After Login | `authentication`, `balance` | Test balance matches expected value |
-| Test Login With Admin User | `authentication`, `admin` | Test admin user authentication |
 | Test Authentication State Persistence | `authentication`, `persistence` | Test auth state persists across operations |
 
 ### Game Room Tests (10 tests)
@@ -164,7 +163,6 @@ All test users defined in `global_vars.robot`:
 - **default**: testuser1/password123 (standard user)
 - **high_roller**: alice/alicepass (premium user)  
 - **basic_user**: bob/bobpass (basic user)
-- **admin_user**: alice/alicepass (admin access using alice credentials)
 
 All users start with 1,000,000 credits.
 
@@ -212,10 +210,10 @@ Robot Framework automatically generates:
 
 ## 🏷️ Test Tags
 
-The test suite uses 24 different tags organized by category:
+The test suite uses 23 different tags organized by category:
 
 ### **Primary Test Categories**
-- `authentication` (8 tests): Login, session management, user types
+- `authentication` (7 tests): Login, session management, user types
 - `connection` (7 tests): WebSocket connectivity, timeouts, stability  
 - `room` (10 tests): Room joining, state management, capacity
 - `e2e` (8 tests): End-to-end workflows and complete user journeys
@@ -229,7 +227,6 @@ The test suite uses 24 different tags organized by category:
 - `user_types` (1 test): Multiple user authentication types
 - `session` (1 test): Session token validation
 - `balance` (1 test): Balance verification after login
-- `admin` (1 test): Admin user authentication
 - `persistence` (1 test): Authentication state persistence
 - `stability` (1 test): Connection stability over time
 - `reconnection` (1 test): Reconnection after disconnect
@@ -254,7 +251,7 @@ The test suite uses 24 different tags organized by category:
 # Run critical smoke tests (3 tests)
 robot --include smoke tests/
 
-# Run all authentication tests (8 tests)
+# Run all authentication tests (7 tests)
 robot --include authentication tests/
 
 # Run connection tests (7 tests)
@@ -292,7 +289,7 @@ robot --exclude "rapid_betting OR error_recovery" tests/
 ### Educational Benefits
 - **Perfect for Tutorials**: Minimal file structure, easy to understand
 - **Real Protocol Buffers**: Actual WebSocket and protobuf communication
-- **Complete Coverage**: 33 tests covering all game aspects
+- **Complete Coverage**: 32 tests covering all game aspects
 - **Error Handling**: Proper error scenarios and recovery
 
 ### Consolidated Keywords

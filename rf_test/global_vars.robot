@@ -28,16 +28,10 @@ ${BASIC_USER_PASSWORD}          bobpass
 ${BASIC_USER_EXPECTED_BALANCE}    ${1000000}
 ${BASIC_USER_USER_TYPE}         basic
 
-${ADMIN_USERNAME}               alice
-${ADMIN_PASSWORD}               alicepass
-${ADMIN_EXPECTED_BALANCE}       ${1000000}
-${ADMIN_USER_TYPE}              admin
-
 # User data dictionaries
 &{DEFAULT_USER}         username=${DEFAULT_USERNAME}    password=${DEFAULT_PASSWORD}    expected_balance=${DEFAULT_EXPECTED_BALANCE}    user_type=${DEFAULT_USER_TYPE}
 &{HIGH_ROLLER_USER}     username=${HIGH_ROLLER_USERNAME}    password=${HIGH_ROLLER_PASSWORD}    expected_balance=${HIGH_ROLLER_EXPECTED_BALANCE}    user_type=${HIGH_ROLLER_USER_TYPE}
 &{BASIC_USER_DATA}      username=${BASIC_USER_USERNAME}    password=${BASIC_USER_PASSWORD}    expected_balance=${BASIC_USER_EXPECTED_BALANCE}    user_type=${BASIC_USER_USER_TYPE}
-&{ADMIN_USER_DATA}      username=${ADMIN_USERNAME}    password=${ADMIN_PASSWORD}    expected_balance=${ADMIN_EXPECTED_BALANCE}    user_type=${ADMIN_USER_TYPE}
 
 # Room Configurations (Server creates 10 rooms, all with capacity 50)
 ${ROOM_1_ID}            1
