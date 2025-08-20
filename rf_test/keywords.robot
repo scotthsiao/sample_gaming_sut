@@ -171,7 +171,7 @@ Get User Credentials
     END
 
 Get Room Data
-    [Documentation]    Get room configuration by type
+    [Documentation]    Get room configuration by type (Server has 10 rooms: 1-10)
     [Arguments]    ${room_type}=room_1
     
     IF    '${room_type}' == 'room_1' or '${room_type}' == '1'
@@ -180,8 +180,22 @@ Get Room Data
         RETURN    &{ROOM_2_DATA}
     ELSE IF    '${room_type}' == 'room_3' or '${room_type}' == '3'
         RETURN    &{ROOM_3_DATA}
+    ELSE IF    '${room_type}' == 'room_4' or '${room_type}' == '4'
+        RETURN    &{ROOM_4_DATA}
+    ELSE IF    '${room_type}' == 'room_5' or '${room_type}' == '5'
+        RETURN    &{ROOM_5_DATA}
+    ELSE IF    '${room_type}' == 'room_6' or '${room_type}' == '6'
+        RETURN    &{ROOM_6_DATA}
+    ELSE IF    '${room_type}' == 'room_7' or '${room_type}' == '7'
+        RETURN    &{ROOM_7_DATA}
+    ELSE IF    '${room_type}' == 'room_8' or '${room_type}' == '8'
+        RETURN    &{ROOM_8_DATA}
+    ELSE IF    '${room_type}' == 'room_9' or '${room_type}' == '9'
+        RETURN    &{ROOM_9_DATA}
+    ELSE IF    '${room_type}' == 'room_10' or '${room_type}' == '10'
+        RETURN    &{ROOM_10_DATA}
     ELSE
-        Fail    Room type '${room_type}' not found
+        Fail    Room type '${room_type}' not found (valid rooms: 1-10)
     END
 
 Generate Random Username

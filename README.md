@@ -7,7 +7,7 @@ A real-time WebSocket-based dice gambling game system implemented in Python with
 - **Real-time Communication**: WebSocket-based client-server architecture
 - **Protocol Buffers**: Efficient binary message serialization
 - **Secure Authentication**: bcrypt password hashing and session management
-- **Multi-room Support**: Join different game rooms with individual jackpot pools
+- **Multi-room Support**: 10 game rooms (1-10) with individual jackpot pools, 50 capacity each
 - **Dice Gambling**: Place bets on six-sided dice outcomes with 6x payouts
 - **Rate Limiting**: Built-in protection against spam and abuse (disabled for testing)
 - **Comprehensive Testing**: Full test suite covering all components
@@ -146,7 +146,7 @@ python run_client.py --server ws://localhost:8765 --demo
 ### Game Flow
 
 1. **Login**: Authenticate with username/password
-2. **Join Room**: Enter a game room (1-10 available)
+2. **Join Room**: Enter a game room (rooms 1-10 available, all with 50 capacity)
 3. **Place Bets**: Bet on dice outcomes for the current round
 4. **Finish Betting**: Signal end of betting phase
 5. **Get Results**: Receive dice result and calculate winnings

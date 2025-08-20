@@ -138,10 +138,10 @@ All test users defined in `global_vars.robot`:
 All users start with 1,000,000 credits.
 
 ### Room Configuration
-3 pre-configured rooms:
-- **Room 1 (Main)**: 1-1000 bet range, 50 capacity
-- **Room 2 (High Stakes)**: 100-10000 bet range, 20 capacity  
-- **Room 3 (Beginner)**: 1-50 bet range, 100 capacity
+10 pre-configured rooms (matching server setup):
+- **Rooms 1-10**: All have 1-1000 bet range, 50 capacity each
+- Server creates identical rooms with names "Room 1", "Room 2", etc.
+- All rooms support the same betting limits and player capacity
 
 ## 📊 Running Tests
 
