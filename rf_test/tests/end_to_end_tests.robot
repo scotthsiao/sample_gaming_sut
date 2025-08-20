@@ -24,7 +24,7 @@ Test Complete Dice Game Workflow
     ${initial_balance}=    Set Variable    ${snapshot}[user_balance]
     
     # Step 5: Perform full game round
-    ${game_result}=    Perform Full Game Round    3    10
+    ${game_result}=    Perform Full Game Round    dice_face=3    amount=10
     
     # Step 8: Verify game logic
     Should Be True    1 <= ${game_result}[dice_result] <= 6

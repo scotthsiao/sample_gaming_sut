@@ -2,7 +2,7 @@
 Documentation    Common resource file with shared imports and keywords for dice gambling game tests
 
 # Variable imports
-Resource         data/variables/global_vars.robot
+Resource         global_vars.robot
 
 # Library imports
 Library          Collections
@@ -12,9 +12,7 @@ Library          OperatingSystem
 Library          libraries/GameClientLibrary.py
 
 # Keyword resource imports
-Resource         keywords/auth_keywords.robot
-Resource         keywords/game_keywords.robot
-Resource         keywords/utility_keywords.robot
+Resource         keywords.robot
 
 *** Variables ***
 # Test execution variables
@@ -28,7 +26,7 @@ Initialize Test Suite
     Log    Dice gambling game test suite initialized at: ${start_time}
     
     # Verify test data integrity
-    Verify Test Data Integrity
+    Validate Test Data Integrity
     
     # Log configuration
     Log Configuration

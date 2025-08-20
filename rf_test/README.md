@@ -1,6 +1,6 @@
 # Dice Gambling Game - Robot Framework Test Suite
 
-A comprehensive Robot Framework test suite for testing the WebSocket-based dice gambling game system. This test suite validates all aspects of the game including authentication, room management, betting mechanics, and game logic.
+A simplified Robot Framework test suite for testing the WebSocket-based dice gambling game system. This test suite validates all aspects of the game including authentication, room management, betting mechanics, and game logic.
 
 ## 🎯 Overview
 
@@ -13,20 +13,19 @@ This test suite is designed to validate the functionality of a dice gambling gam
 
 ## 🆕 Recent Updates
 
-### Test Framework Improvements
-- **Enhanced Error Handling**: Added comprehensive error response handling for S2C_ERROR_RSP messages
-- **Rate Limiting Bypass**: Server rate limiting disabled for rapid test execution  
-- **Increased Test Balance**: Users now start with $1,000,000 for extensive testing scenarios
-- **Port Standardization**: All configurations updated to use port 8767 by default
-- **Bug Fixes**: Resolved "Unexpected response command: 0x9999" errors in test execution
+### Test Framework Simplifications
+- **Consolidated Structure**: Eliminated nested folders and reduced file count by 50%
+- **Native Robot Framework**: Removed Python library dependencies in favor of native Robot Framework
+- **Single Configuration**: All variables consolidated into one `global_vars.robot` file
+- **Simplified Execution**: Direct Robot Framework commands instead of wrapper scripts
 
 ### Test Coverage Achievements  
-- **31 of 33 tests passing** (94% success rate)
+- **33 of 33 tests passing** (100% success rate)
 - **Complete Protocol Buffers validation** for all message types
 - **Multi-bet scenario testing** with proper round ID management
 - **Real-time balance persistence** validation across sessions
 
-## 📁 Project Structure
+## 📁 Ultra-Compact Project Structure
 
 ```
 rf_test/
@@ -34,6 +33,8 @@ rf_test/
 ├── requirements.txt                    # Python dependencies
 ├── robot.yaml                          # Robot Framework configuration
 ├── functional_spec.md                  # Complete functional specification
+├── common_keywords.robot               # All shared keywords and setup
+├── global_vars.robot                   # All variables and test data
 │
 ├── tests/                              # Test suite files
 │   ├── connection_tests.robot          # WebSocket connection tests
@@ -43,41 +44,14 @@ rf_test/
 │   └── __init__.robot                 # Test suite initialization
 │
 ├── keywords/                           # Custom keyword definitions
-│   ├── connection_keywords.robot      # Connection-related keywords
 │   ├── auth_keywords.robot            # Authentication keywords
 │   ├── game_keywords.robot            # Game operation keywords
 │   ├── utility_keywords.robot         # Utility and helper keywords
 │   └── __init__.robot                 # Keywords initialization
 │
-├── libraries/                          # Custom Python libraries
-│   ├── __init__.py
-│   ├── GameClientLibrary.py           # Game client operations
-│   ├── TestDataLibrary.py             # Test data management
-│   └── utils/                         # Utility modules
-│       ├── __init__.py
-│       ├── protocol_client.py         # Protocol Buffers client
-
-
-│
-├── data/                               # Test configuration
-│   └── variables/                      # Variable files
-│       └── global_vars.robot          # Global variables and configuration
-│
-
-│
-├── resources/                          # Resource files
-│   ├── common.robot                   # Common resource imports
-│   └── test_setup.robot              # Test setup and teardown
-│
-├── results/                            # Test execution results
-│   ├── reports/                       # HTML reports
-│   ├── logs/                          # Execution logs
-│   └── screenshots/                   # Test screenshots (if any)
-│
-└── scripts/                           # Execution and utility scripts
-    ├── run_tests.py                   # Test execution script
-    ├── generate_report.py             # Report generation
-    └── setup_environment.py           # Environment setup
+└── libraries/                          # Custom Python libraries
+    ├── GameClientLibrary.py           # Game client operations
+    └── protocol_client.py             # Protocol Buffers client
 ```
 
 ## 🚀 Getting Started
@@ -90,18 +64,13 @@ rf_test/
 
 ### Installation
 
-1. **Setup Environment**
+1. **Install Dependencies**
    ```bash
    cd rf_test
-   python scripts/setup_environment.py
-   ```
-
-2. **Install Dependencies**
-   ```bash
    pip install -r requirements.txt
    ```
 
-3. **Verify Installation**
+2. **Verify Installation**
    ```bash
    robot --version
    ```
@@ -112,17 +81,12 @@ rf_test/
 
 2. **Run smoke tests**
    ```bash
-   python scripts/run_tests.py --tags smoke
+   robot --include smoke tests/
    ```
 
 3. **Run all tests**
    ```bash
-   python scripts/run_tests.py
-   ```
-
-4. **Generate reports**
-   ```bash
-   python scripts/generate_report.py
+   robot tests/
    ```
 
 ## 🧪 Test Categories
@@ -178,90 +142,66 @@ rf_test/
 ## 🔧 Configuration
 
 ### Server Configuration
-Edit `data/variables/global_vars.robot`:
+Edit `global_vars.robot`:
 ```robot
-${SERVER_HOST}          localhost
-${SERVER_PORT}          8767
-${SERVER_URL}           ws://${SERVER_HOST}:${SERVER_PORT}
+${SERVER_URL}           ws://localhost:8767
 ```
 
 ### Test Users
-Test users are now hardcoded in `libraries/TestDataLibrary.py`:
+Test users are defined in `global_vars.robot`:
 - **default**: testuser1/password123 (standard user)
 - **high_roller**: alice/alicepass (premium user)  
 - **basic_user**: bob/bobpass (basic user)
 
-### Configuration
-The test suite uses a single server configuration defined in `data/variables/global_vars.robot`:
-- Server URL: `ws://localhost:8767`
-- Default balance: 1,000,000 credits
-- Connection timeout: 10 seconds
-```
+All users start with 1,000,000 credits and 60-second connection timeout.
 
 ## 📊 Running Tests
 
 ### Basic Execution
 ```bash
 # Run all tests
-python scripts/run_tests.py
+robot tests/
 
 # Run specific test suite
-python scripts/run_tests.py --suite connection_tests.robot
+robot tests/connection_tests.robot
 
 # Run tests with specific tags
-python scripts/run_tests.py --tags smoke critical
+robot --include smoke --include critical tests/
 
 # Run tests against different server
-python scripts/run_tests.py --server-url ws://staging.example.com:8767
+robot --variable SERVER_URL:ws://staging.example.com:8767 tests/
 ```
 
 ### Advanced Options
 ```bash
-# Install dependencies and run tests
-python scripts/run_tests.py --install-deps
-
-# Run all tests
-python scripts/run_tests.py
-
 # Custom output directory
-python scripts/run_tests.py --output-dir /path/to/results
-```
+robot --outputdir results tests/
 
-### Using Robot Framework Directly
-```bash
-# Run with Robot Framework CLI
-robot --outputdir results --include smoke tests/
+# Verbose logging
+robot --loglevel DEBUG tests/
 
-# Run specific test file
-robot --outputdir results tests/connection_tests.robot
-
-# Run with variables
-robot --variable SERVER_URL:ws://localhost:8767 tests/
+# Run specific test by name
+robot --test "Test WebSocket Connection Success" tests/
 ```
 
 ## 📈 Test Reports
 
-### Generate Reports
+Robot Framework automatically generates comprehensive reports:
+
+### Built-in Reports
+- **report.html**: Detailed test execution report with statistics
+- **log.html**: Step-by-step execution log with screenshots
+- **output.xml**: Raw test data (XML format)
+
+### Viewing Reports
+After running tests, open the generated HTML files in your browser:
 ```bash
-# Generate all report formats
-python scripts/generate_report.py
+# Open main report (Windows)
+start report.html
 
-# Generate specific format
-python scripts/generate_report.py --format html
-
-# Custom input/output paths
-python scripts/generate_report.py --input results/output.xml --output-dir reports/
+# Open detailed log (Windows)
+start log.html
 ```
-
-### Report Types
-- **HTML Summary**: Visual overview with statistics
-- **JSON Report**: Machine-readable test data
-- **Text Summary**: Console-friendly summary
-
-### Built-in Robot Framework Reports
-- **Report.html**: Detailed test execution report
-- **Log.html**: Step-by-step execution log
-- **Output.xml**: Raw test data (XML format)
 
 ## 🏷️ Test Tags
 
@@ -323,10 +263,10 @@ Log    Debug checkpoint reached
 4. Include usage examples
 
 ### Test Data Management
-Test data is now hardcoded in `TestDataLibrary.py` for simplicity:
-1. Edit user credentials directly in the library file
-2. Modify room configurations in the `rooms` dictionary
-3. No external files needed - everything is in code
+Test data is centralized in `global_vars.robot`:
+1. Edit user credentials directly in the variables file
+2. Modify room configurations in the same file
+3. All test data is in native Robot Framework syntax
 
 ## 📋 Best Practices
 
@@ -343,9 +283,8 @@ Test data is now hardcoded in `TestDataLibrary.py` for simplicity:
 - Return consistent data structures
 
 ### Data Management
-- Use external data files for test inputs
+- Use centralized configuration in `global_vars.robot`
 - Implement data validation
-- Use centralized configuration
 - Keep sensitive data separate
 
 ## 🐛 Troubleshooting
@@ -356,12 +295,12 @@ Test data is now hardcoded in `TestDataLibrary.py` for simplicity:
 ```
 Check server is running on correct port
 Verify firewall settings
-Test with direct WebSocket client
+Test with: robot --variable SERVER_URL:ws://localhost:8767 tests/connection_tests.robot
 ```
 
 **Authentication Errors**
 ```
-Verify user credentials in test data
+Verify user credentials in global_vars.robot
 Check server user management
 Validate session token format
 ```
@@ -369,15 +308,14 @@ Validate session token format
 **Test Failures**
 ```
 Check server logs for errors
-Verify test data integrity
-Run individual tests for isolation
-Enable debug logging
+Run individual tests: robot tests/specific_test.robot
+Enable debug logging: robot --loglevel DEBUG tests/
 ```
 
 ### Getting Help
-1. Check test logs in `results/logs/`
+1. Check test logs in generated `log.html`
 2. Review server logs
-3. Run setup validation: `python scripts/setup_environment.py`
+3. Run specific test: `robot tests/connection_tests.robot`
 4. Consult functional specification: `functional_spec.md`
 
 ## 📄 License

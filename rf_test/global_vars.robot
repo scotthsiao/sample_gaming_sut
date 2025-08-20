@@ -1,37 +1,18 @@
 *** Variables ***
-# Global variables for dice gambling game test suite - consolidated from multiple files
+# Global variables - ultra-minimal set for dice gambling game
 
-# Server Configuration - Single server URL for all tests
+# Server Configuration
 ${SERVER_URL}           ws://localhost:8767
 
-# Test Configuration
+# Test Configuration  
 ${TIMEOUT}              30
-${SHORT_TIMEOUT}        5
-${LONG_TIMEOUT}         60
 ${CONNECTION_TIMEOUT}   10
 
-# Game Configuration
-${DEFAULT_ROOM_ID}      1
-${MAX_BET_AMOUNT}       1000
-${MIN_BET_AMOUNT}       1
-${DEFAULT_BET_AMOUNT}   10
-${DEFAULT_DICE_FACE}    3
-
-# Test User Defaults
-${TEST_USERNAME}        testuser
-${TEST_PASSWORD}        testpass123
+# Test Environment
 ${DEFAULT_BALANCE}      1000000
+${TEST_ENV}             dev
 
-# Retry Configuration
-${MAX_RETRIES}          3
-${RETRY_DELAY}          2s
-
-# Dice Game Specific
-@{DICE_FACES}           1    2    3    4    5    6
-${WINNING_MULTIPLIER}   6
-${JACKPOT_CONTRIBUTION}    0.01
-
-# User Credentials - consolidated from test_users.robot
+# User Credentials
 ${DEFAULT_USERNAME}             testuser1
 ${DEFAULT_PASSWORD}             password123
 ${DEFAULT_EXPECTED_BALANCE}     ${1000000}
@@ -47,12 +28,18 @@ ${BASIC_USER_PASSWORD}          bobpass
 ${BASIC_USER_EXPECTED_BALANCE}    ${1000000}
 ${BASIC_USER_USER_TYPE}         basic
 
+${ADMIN_USERNAME}               alice
+${ADMIN_PASSWORD}               alicepass
+${ADMIN_EXPECTED_BALANCE}       ${1000000}
+${ADMIN_USER_TYPE}              admin
+
 # User data dictionaries
 &{DEFAULT_USER}         username=${DEFAULT_USERNAME}    password=${DEFAULT_PASSWORD}    expected_balance=${DEFAULT_EXPECTED_BALANCE}    user_type=${DEFAULT_USER_TYPE}
 &{HIGH_ROLLER_USER}     username=${HIGH_ROLLER_USERNAME}    password=${HIGH_ROLLER_PASSWORD}    expected_balance=${HIGH_ROLLER_EXPECTED_BALANCE}    user_type=${HIGH_ROLLER_USER_TYPE}
 &{BASIC_USER_DATA}      username=${BASIC_USER_USERNAME}    password=${BASIC_USER_PASSWORD}    expected_balance=${BASIC_USER_EXPECTED_BALANCE}    user_type=${BASIC_USER_USER_TYPE}
+&{ADMIN_USER_DATA}      username=${ADMIN_USERNAME}    password=${ADMIN_PASSWORD}    expected_balance=${ADMIN_EXPECTED_BALANCE}    user_type=${ADMIN_USER_TYPE}
 
-# Room Configurations - consolidated from test_rooms.robot
+# Room Configurations
 ${ROOM_1_ID}            1
 ${ROOM_1_NAME}          Main Room
 ${ROOM_1_MAX_CAPACITY}  50
