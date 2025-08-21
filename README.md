@@ -297,9 +297,9 @@ rf_test/
 ├── global_vars.robot           # ALL variables (58 lines)
 ├── keywords.robot              # ALL keywords (230 lines)
 ├── common_keywords.robot       # Setup/teardown (181 lines)
-├── tests/                      # 4 test files, 33 tests total
+├── tests/                      # 4 test files, 32 tests total
 │   ├── connection_tests.robot  # 7 WebSocket tests
-│   ├── authentication_tests.robot # 8 login tests
+│   ├── authentication_tests.robot # 7 login tests
 │   ├── game_room_tests.robot   # 10 room tests
 │   └── end_to_end_tests.robot  # 8 workflow tests
 └── libraries/                  # 2 Python files only
@@ -309,7 +309,7 @@ rf_test/
 
 **🚀 Running Tests:**
 ```bash
-# Run all 33 tests (100% pass rate)
+# Run all 32 tests (100% pass rate)
 cd rf_test
 robot tests/
 
@@ -327,9 +327,9 @@ robot --include smoke tests/
 robot --include e2e tests/
 ```
 
-**📊 Complete Test Coverage (33/33 tests):**
+**📊 Complete Test Coverage (32/32 tests):**
 - **Connection Tests (7)**: WebSocket connectivity, timeouts, reconnection
-- **Authentication Tests (8)**: Login/logout, session management, multiple user types
+- **Authentication Tests (7)**: Login/logout, session management, multiple user types
 - **Game Room Tests (10)**: Room joining, state management, capacity validation
 - **End-to-End Tests (8)**: Complete workflows, multi-bet scenarios, balance tracking
 

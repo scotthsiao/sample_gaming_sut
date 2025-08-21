@@ -1,7 +1,7 @@
 # Functional Specification for sample_gaming_sut
 
-**Document Version:** 1.2  
-**Date:** August 18, 2025  
+**Document Version:** 1.3  
+**Date:** August 21, 2025  
 **Project:** Sample Gaming System Under Test  
 **Purpose:** Tutorial and Testing Framework for WebSocket-based Gaming Systems
 
@@ -277,6 +277,7 @@ flowchart TD
   - Users can join rooms with available capacity
   - Users receive confirmation of successful room joining
   - Room capacity limits are enforced (max 50 users per room)
+  - Server provides 10 identical rooms (ID 1-10)
 - **Priority:** High
 
 **REQ-ROOM-002: Room State Synchronization**
@@ -809,9 +810,104 @@ class GameState:
 - Input injection testing
 - Rate limiting verification
 
-### 12.5 Testing Tools
+### 12.5 Ultra-Compact Robot Framework Test Suite
 
-**Recommended Tools:**
+**Overview:**
+The project includes an ultra-compact Robot Framework test suite specifically designed for beginners and tutorials, located in the `rf_test/` directory.
+
+**Ultra-Compaction Achievements:**
+- **File Count Reduced**: From 11 files to only 8 files (27% reduction)
+- **Code Lines Eliminated**: 790+ lines of Python wrapper code removed
+- **Structure Simplified**: Zero nested folders, single keyword file approach
+- **Native Robot Framework**: 100% Robot Framework, no custom Python libraries needed
+- **Tutorial Perfect**: Ideal structure for Robot Framework beginners
+
+**Test Suite Structure:**
+```
+rf_test/
+├── global_vars.robot           # ALL variables (58 lines)
+├── keywords.robot              # ALL keywords (230 lines)
+├── common_keywords.robot       # Setup/teardown (181 lines)
+├── tests/                      # 4 test files, 32 tests total
+│   ├── connection_tests.robot  # 7 WebSocket tests
+│   ├── authentication_tests.robot # 7 login tests
+│   ├── game_room_tests.robot   # 10 room tests
+│   └── end_to_end_tests.robot  # 8 workflow tests
+└── libraries/                  # 2 Python files only
+    ├── GameClientLibrary.py    # Game operations
+    └── protocol_client.py      # WebSocket client
+```
+
+**Complete Test Coverage (32/32 tests - 100% pass rate):**
+
+*Connection Tests (7):*
+- Test WebSocket Connection Success [`smoke`, `connection`]
+- Test Connection With Invalid URL [`negative`, `connection`]
+- Test Connection Timeout [`negative`, `connection`]
+- Test Connection Stability [`stability`, `connection`]
+- Test Reconnection After Disconnect [`reconnection`, `connection`]
+- Test Multiple Connection Attempts [`retry`, `connection`]
+- Test Connection During Server Unavailable [`negative`, `connection`]
+
+*Authentication Tests (7):*
+- Test Successful Login [`smoke`, `authentication`]
+- Test Login With Invalid Credentials [`negative`, `authentication`]
+- Test Login With Empty Credentials [`negative`, `authentication`]
+- Test Multiple User Types Login [`authentication`, `user_types`]
+- Test Session Token Validation [`authentication`, `session`]
+- Test Balance Verification After Login [`authentication`, `balance`]
+- Test Authentication State Persistence [`authentication`, `persistence`]
+
+*Game Room Tests (10):*
+- Test Join Default Room [`smoke`, `room`]
+- Test Join Specific Room [`room`, `specific`]
+- Test Join Nonexistent Room [`negative`, `room`]
+- Test Room State Retrieval [`room`, `state`]
+- Test Multiple Room Access [`room`, `multiple`]
+- Test Room Capacity Information [`room`, `capacity`]
+- Test Join Room Without Authentication [`negative`, `room`, `auth`]
+- Test High Stakes Room Access [`room`, `high_stakes`]
+- Test Room Jackpot Pool Information [`room`, `jackpot`]
+- Test Room State Consistency [`room`, `consistency`]
+
+*End-to-End Tests (8):*
+- Test Complete Dice Game Workflow [`smoke`, `e2e`, `workflow`]
+- Test Multiple Bets Single Round [`e2e`, `multiple_bets`]
+- Test High Stakes Dice Game [`e2e`, `high_stakes`]
+- Test Rapid Betting Rounds [`e2e`, `rapid_betting`]
+- Test Balance Tracking Accuracy [`e2e`, `balance_tracking`]
+- Test Error Recovery During Game [`e2e`, `error_recovery`]
+- Test Complete User Journey [`e2e`, `user_journey`]
+- Test Session Persistence [`e2e`, `session_persistence`]
+
+**Supported Test Users:**
+- `default`: testuser1/password123 (standard user)
+- `high_roller`: alice/alicepass (premium user)
+- `basic_user`: bob/bobpass (basic user)
+
+**Room Configuration (Matches Server Setup):**
+- 10 rooms (ID 1-10) with identical configuration
+- All rooms: 50 capacity, 1-1000 bet range
+- Names: "Room 1", "Room 2", ... "Room 10"
+
+**Test Execution:**
+```bash
+cd rf_test
+robot tests/                    # Run all 32 tests
+robot --include smoke tests/    # Run 3 critical tests
+robot --include e2e tests/      # Run 8 workflow tests
+robot --dryrun tests/          # Syntax validation
+```
+
+**Educational Benefits:**
+- **Perfect for Tutorials**: Minimal file structure, easy to understand
+- **Real Protocol Implementation**: Actual WebSocket + Protocol Buffers communication
+- **Complete Game Testing**: Authentication → Room Joining → Betting → Results
+- **Error Handling Examples**: Comprehensive negative testing scenarios
+
+### 12.6 Traditional Testing Tools
+
+**Additional Recommended Tools:**
 - WebSocket testing clients (wscat, custom Python clients)
 - Load testing tools (Artillery.io, custom load generators)
 - Protocol buffer validation tools
@@ -1143,6 +1239,8 @@ message ErrorResponse {
 |---------|------|--------|---------|
 | 1.0 | August 16, 2025 | System | Initial complete functional specification |
 | 1.1 | August 16, 2025 | System | Updated bet_id from int64 to string (UUID), updated protoc commands to include --pyi_out |
+| 1.2 | August 18, 2025 | System | Updated room configuration to match server (10 rooms with 50 capacity) |
+| 1.3 | August 21, 2025 | System | Added comprehensive Ultra-Compact Robot Framework Test Suite documentation |
 
 **Review and Approval:**
 
