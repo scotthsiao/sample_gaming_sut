@@ -1,3 +1,13 @@
+/**
+ * Robot Framework Jenkins Pipeline
+ * 
+ * REQUIRED: Install Robot Framework Plugin
+ * - Go to Jenkins → Manage Jenkins → Manage Plugins
+ * - Search for "Robot Framework Plugin"
+ * - Install and restart Jenkins
+ * - This enables rich test result visualization in Jenkins UI
+ */
+
 pipeline {
     agent any
     
@@ -540,6 +550,10 @@ pipeline {
                         unstableThreshold: 90.0,
                         otherFiles: '**/*.png,**/*.jpg'
                     ])
+                    echo "✅ Robot Framework results published successfully"
+                } else {
+                    echo "⚠️ No Robot Framework output files found"
+                    currentBuild.result = 'FAILURE'
                 }
                 
                 // Stop test server unless requested to keep running
