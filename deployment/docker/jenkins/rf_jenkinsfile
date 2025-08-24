@@ -478,6 +478,10 @@ pipeline {
                             
                             echo "Robot Framework tests completed with exit code: \$RF_EXIT_CODE"
                             
+                            # Wait a few extra seconds to ensure all test connections are properly closed
+                            echo "Waiting for test connections to close gracefully..."
+                            sleep 5
+                            
                             # Copy results to consistent location
                             if [ -f \${TEST_RESULTS_DIR}/rf_output.xml ]; then
                                 cp \${TEST_RESULTS_DIR}/rf_output.xml \${TEST_RESULTS_DIR}/output.xml
@@ -507,6 +511,10 @@ pipeline {
                             set RF_EXIT_CODE=%ERRORLEVEL%
                             
                             echo Robot Framework tests completed with exit code: %RF_EXIT_CODE%
+                            
+                            REM Wait a few extra seconds to ensure all test connections are properly closed
+                            echo Waiting for test connections to close gracefully...
+                            timeout /t 5 /nobreak >nul
                             
                             if exist %TEST_RESULTS_DIR%\\rf_output.xml (
                                 copy %TEST_RESULTS_DIR%\\rf_output.xml %TEST_RESULTS_DIR%\\output.xml
@@ -562,6 +570,14 @@ pipeline {
                         sh '''
                             echo "Stopping test server..."
                             
+                            # Wait for any remaining Robot Framework processes to complete
+                            echo "Checking for remaining Robot Framework processes..."
+                            while pgrep -f "robot.*tests" >/dev/null 2>&1; do
+                                echo "Waiting for Robot Framework processes to complete..."
+                                sleep 2
+                            done
+                            echo "No active Robot Framework processes found"
+                            
                             # Stop server using PID file if available
                             if [ -f ${TEST_RESULTS_DIR}/server.pid ]; then
                                 SERVER_PID=$(cat ${TEST_RESULTS_DIR}/server.pid)
@@ -614,6 +630,17 @@ pipeline {
                     } else {
                         bat '''
                             echo Stopping test server...
+                            
+                            REM Wait for any remaining Robot Framework processes to complete
+                            echo Checking for remaining Robot Framework processes...
+                            :check_robot_processes
+                            tasklist /fi "imagename eq python.exe" /fo csv | find "robot" >nul 2>&1
+                            if !errorlevel! equ 0 (
+                                echo Waiting for Robot Framework processes to complete...
+                                timeout /t 2 /nobreak >nul
+                                goto check_robot_processes
+                            )
+                            echo No active Robot Framework processes found
                             
                             REM Stop using PID file if available
                             if exist %TEST_RESULTS_DIR%\\server.pid (
