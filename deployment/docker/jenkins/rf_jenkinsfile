@@ -1,0 +1,582 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Environment variables
+        PYTHON_ENV = 'rf_venv'
+        TEST_RESULTS_DIR = 'rf_test_results'
+        LOG_LEVEL = 'INFO'
+        
+        // Paths
+        WORKSPACE_DIR = "${WORKSPACE}"
+        VENV_PATH = "${WORKSPACE}/${PYTHON_ENV}"
+        RF_TEST_DIR = "rf_test"
+        CONFIG_DIR = "config"
+        
+        // Server configuration
+        SERVER_HOST = '0.0.0.0'
+        SERVER_PORT = '8768'
+        SERVER_SCRIPT = "scripts/start_server.py"
+        
+        // Test configuration
+        ROBOT_OPTIONS = '--outputdir ${TEST_RESULTS_DIR} --log rf_log.html --report rf_report.html --output rf_output.xml'
+    }
+    
+    parameters {
+        choice(
+            name: 'TEST_SUITE',
+            choices: ['all', 'smoke', 'connection', 'authentication', 'game_room', 'end_to_end'],
+            description: 'Test suite to run'
+        )
+        choice(
+            name: 'TEST_ENVIRONMENT',
+            choices: ['development', 'testing', 'ci'],
+            description: 'Test environment configuration'
+        )
+        string(
+            name: 'INCLUDE_TAGS',
+            defaultValue: '',
+            description: 'Robot Framework tags to include (e.g., smoke, e2e)'
+        )
+        string(
+            name: 'EXCLUDE_TAGS',
+            defaultValue: '',
+            description: 'Robot Framework tags to exclude'
+        )
+        booleanParam(
+            name: 'KEEP_SERVER_RUNNING',
+            defaultValue: false,
+            description: 'Keep test server running after tests complete'
+        )
+    }
+    
+    options {
+        // Keep only last 20 builds
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        
+        // Timeout the build after 45 minutes
+        timeout(time: 45, unit: 'MINUTES')
+        
+        // Disable concurrent builds
+        disableConcurrentBuilds()
+        
+        // Skip default checkout
+        skipDefaultCheckout(true)
+    }
+    
+    stages {
+        stage('Checkout Code') {
+            steps {
+                script {
+                    echo "🔄 Checking out latest code from GitHub..."
+                    
+                    // Clean workspace
+                    deleteDir()
+                    
+                    // Checkout the repository
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/scotthsiao/sample_gaming_sut.git'
+                        ]],
+                        extensions: [
+                            [$class: 'CleanBeforeCheckout'],
+                            [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]
+                        ]
+                    ])
+                    
+                    echo "✅ Code checkout completed"
+                }
+            }
+        }
+        
+        stage('Setup Environment') {
+            steps {
+                script {
+                    echo "🔧 Setting up Python environment and dependencies..."
+                    
+                    if (isUnix()) {
+                        // Linux/macOS setup
+                        sh '''
+                            echo "Setting up Python environment for Robot Framework tests..."
+                            
+                            # Check Python availability
+                            PYTHON_CMD=""
+                            if command -v python3 >/dev/null 2>&1; then
+                                PYTHON_CMD="python3"
+                                echo "Found python3: $(which python3)"
+                            elif command -v python >/dev/null 2>&1; then
+                                PYTHON_VERSION=$(python --version 2>&1)
+                                echo "Found python: $PYTHON_VERSION"
+                                if echo "$PYTHON_VERSION" | grep -q "Python 3"; then
+                                    PYTHON_CMD="python"
+                                else
+                                    echo "❌ Python 3 is required, found: $PYTHON_VERSION"
+                                    exit 1
+                                fi
+                            else
+                                echo "❌ Python not found. Please install Python 3.8 or higher"
+                                exit 1
+                            fi
+                            
+                            echo "Using Python command: $PYTHON_CMD"
+                            $PYTHON_CMD --version
+                            
+                            # Create virtual environment
+                            echo "Creating Python virtual environment for RF tests..."
+                            $PYTHON_CMD -m venv ${PYTHON_ENV}
+                            
+                            # Activate virtual environment
+                            echo "Activating virtual environment..."
+                            . ${PYTHON_ENV}/bin/activate
+                            
+                            # Upgrade pip
+                            echo "Upgrading pip..."
+                            python -m pip install --upgrade pip
+                            
+                            # Install main requirements
+                            echo "Installing main project requirements..."
+                            if [ -f requirements.txt ]; then
+                                pip install -r requirements.txt
+                            else
+                                echo "❌ requirements.txt not found"
+                                exit 1
+                            fi
+                            
+                            # Install Robot Framework and additional testing dependencies
+                            echo "Installing Robot Framework and test dependencies..."
+                            pip install robotframework robotframework-seleniumlibrary
+                            
+                            # Install RF test requirements if they exist
+                            if [ -f ${RF_TEST_DIR}/requirements.txt ]; then
+                                echo "Installing Robot Framework specific requirements..."
+                                pip install -r ${RF_TEST_DIR}/requirements.txt
+                            fi
+                            
+                            # Compile Protocol Buffers
+                            echo "Compiling Protocol Buffers..."
+                            if command -v protoc >/dev/null 2>&1; then
+                                echo "Found protoc: $(which protoc)"
+                                protoc --version
+                                
+                                if [ -f proto/game_messages.proto ]; then
+                                    protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                                    echo "✅ Protocol Buffers compiled successfully"
+                                else
+                                    echo "❌ Protocol Buffers file not found: proto/game_messages.proto"
+                                    exit 1
+                                fi
+                            else
+                                echo "❌ protoc not found. Please install Protocol Buffers compiler"
+                                exit 1
+                            fi
+                            
+                            echo "✅ Environment setup completed successfully"
+                        '''
+                    } else {
+                        // Windows setup
+                        bat '''
+                            echo Setting up Python environment for Robot Framework tests...
+                            
+                            echo Creating Python virtual environment...
+                            python -m venv %PYTHON_ENV%
+                            
+                            echo Activating virtual environment and installing dependencies...
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            echo Upgrading pip...
+                            pip install --upgrade pip
+                            
+                            echo Installing main requirements...
+                            if exist requirements.txt (
+                                pip install -r requirements.txt
+                            ) else (
+                                echo ❌ requirements.txt not found
+                                exit /b 1
+                            )
+                            
+                            echo Installing Robot Framework and test dependencies...
+                            pip install robotframework robotframework-seleniumlibrary
+                            
+                            if exist %RF_TEST_DIR%\\requirements.txt (
+                                echo Installing Robot Framework specific requirements...
+                                pip install -r %RF_TEST_DIR%\\requirements.txt
+                            )
+                            
+                            echo Compiling Protocol Buffers...
+                            if exist proto\\game_messages.proto (
+                                protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                                echo ✅ Protocol Buffers compiled
+                            ) else (
+                                echo ❌ Protocol Buffers file not found
+                                exit /b 1
+                            )
+                            
+                            echo ✅ Environment setup completed
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Update Configuration') {
+            steps {
+                script {
+                    echo "🔧 Updating configuration for test environment..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            # Activate virtual environment
+                            . ${PYTHON_ENV}/bin/activate
+                            
+                            # Update configuration for test environment
+                            echo "Setting test environment: ${TEST_ENVIRONMENT}"
+                            
+                            # Update config.yaml for testing if needed
+                            if [ -f ${CONFIG_DIR}/config.yaml ]; then
+                                echo "Found configuration file"
+                                
+                                # Apply configuration updates
+                                python ${CONFIG_DIR}/update_jenkins_config.py
+                                
+                                # Export Robot Framework variables
+                                python ${CONFIG_DIR}/config_loader.py --export-robot
+                                
+                                echo "✅ Configuration updated successfully"
+                            else
+                                echo "⚠️ Configuration file not found, using defaults"
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            echo Setting test environment: %TEST_ENVIRONMENT%
+                            
+                            if exist %CONFIG_DIR%\\config.yaml (
+                                echo Found configuration file
+                                
+                                python %CONFIG_DIR%\\update_jenkins_config.py
+                                python %CONFIG_DIR%\\config_loader.py --export-robot
+                                
+                                echo ✅ Configuration updated successfully
+                            ) else (
+                                echo ⚠️ Configuration file not found, using defaults
+                            )
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Start Test Server') {
+            steps {
+                script {
+                    echo "🚀 Starting game server for testing..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            # Activate virtual environment
+                            . ${PYTHON_ENV}/bin/activate
+                            
+                            # Create test results directory
+                            mkdir -p ${TEST_RESULTS_DIR}
+                            
+                            # Start server in background
+                            echo "Starting game server on port ${SERVER_PORT}..."
+                            python ${SERVER_SCRIPT} --host ${SERVER_HOST} --port ${SERVER_PORT} > ${TEST_RESULTS_DIR}/server.log 2>&1 &
+                            SERVER_PID=$!
+                            echo $SERVER_PID > ${TEST_RESULTS_DIR}/server.pid
+                            
+                            # Wait for server to start
+                            echo "Waiting for server to initialize..."
+                            sleep 10
+                            
+                            # Verify server is running
+                            if kill -0 $SERVER_PID 2>/dev/null; then
+                                echo "✅ Game server started successfully (PID: $SERVER_PID)"
+                                echo "Server accessible at ws://${SERVER_HOST}:${SERVER_PORT}"
+                            else
+                                echo "❌ Game server failed to start"
+                                cat ${TEST_RESULTS_DIR}/server.log
+                                exit 1
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            mkdir %TEST_RESULTS_DIR% 2>nul
+                            
+                            echo Starting game server on port %SERVER_PORT%...
+                            start /B python %SERVER_SCRIPT% --host %SERVER_HOST% --port %SERVER_PORT% > %TEST_RESULTS_DIR%\\server.log 2>&1
+                            
+                            timeout /t 10 /nobreak > nul
+                            
+                            echo ✅ Game server startup initiated
+                            echo Server should be accessible at ws://%SERVER_HOST%:%SERVER_PORT%
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Run Robot Framework Tests') {
+            steps {
+                script {
+                    echo "🧪 Running Robot Framework test suite..."
+                    
+                    // Build robot command based on parameters
+                    def robotCmd = "robot ${ROBOT_OPTIONS}"
+                    
+                    // Add include tags if specified
+                    if (params.INCLUDE_TAGS && params.INCLUDE_TAGS.trim()) {
+                        robotCmd += " --include ${params.INCLUDE_TAGS}"
+                    } else if (params.TEST_SUITE != 'all') {
+                        robotCmd += " --include ${params.TEST_SUITE}"
+                    }
+                    
+                    // Add exclude tags if specified
+                    if (params.EXCLUDE_TAGS && params.EXCLUDE_TAGS.trim()) {
+                        robotCmd += " --exclude ${params.EXCLUDE_TAGS}"
+                    }
+                    
+                    // Add test directory
+                    def testPath = ""
+                    switch (params.TEST_SUITE) {
+                        case 'connection':
+                            testPath = "${RF_TEST_DIR}/tests/connection_tests.robot"
+                            break
+                        case 'authentication':
+                            testPath = "${RF_TEST_DIR}/tests/authentication_tests.robot"
+                            break
+                        case 'game_room':
+                            testPath = "${RF_TEST_DIR}/tests/game_room_tests.robot"
+                            break
+                        case 'end_to_end':
+                            testPath = "${RF_TEST_DIR}/tests/end_to_end_tests.robot"
+                            break
+                        default:
+                            testPath = "${RF_TEST_DIR}/tests/"
+                    }
+                    robotCmd += " ${testPath}"
+                    
+                    echo "Executing: ${robotCmd}"
+                    
+                    if (isUnix()) {
+                        sh """
+                            # Activate virtual environment
+                            . \${PYTHON_ENV}/bin/activate
+                            
+                            # Change to project directory
+                            cd \${WORKSPACE_DIR}
+                            
+                            # Run Robot Framework tests
+                            echo "Running Robot Framework tests with command:"
+                            echo "${robotCmd}"
+                            
+                            # Execute tests (capture exit code but don't fail immediately)
+                            set +e
+                            ${robotCmd}
+                            RF_EXIT_CODE=\$?
+                            set -e
+                            
+                            echo "Robot Framework tests completed with exit code: \$RF_EXIT_CODE"
+                            
+                            # Copy results to consistent location
+                            if [ -f \${TEST_RESULTS_DIR}/rf_output.xml ]; then
+                                cp \${TEST_RESULTS_DIR}/rf_output.xml \${TEST_RESULTS_DIR}/output.xml
+                            fi
+                            
+                            # Log test summary
+                            if [ -f \${TEST_RESULTS_DIR}/rf_log.html ]; then
+                                echo "✅ Test results available:"
+                                echo "  - Log: \${TEST_RESULTS_DIR}/rf_log.html"
+                                echo "  - Report: \${TEST_RESULTS_DIR}/rf_report.html"
+                                echo "  - Output: \${TEST_RESULTS_DIR}/rf_output.xml"
+                            fi
+                            
+                            # Exit with Robot Framework exit code
+                            exit \$RF_EXIT_CODE
+                        """
+                    } else {
+                        bat """
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            cd %WORKSPACE_DIR%
+                            
+                            echo Running Robot Framework tests with command:
+                            echo ${robotCmd}
+                            
+                            ${robotCmd}
+                            set RF_EXIT_CODE=%ERRORLEVEL%
+                            
+                            echo Robot Framework tests completed with exit code: %RF_EXIT_CODE%
+                            
+                            if exist %TEST_RESULTS_DIR%\\rf_output.xml (
+                                copy %TEST_RESULTS_DIR%\\rf_output.xml %TEST_RESULTS_DIR%\\output.xml
+                            )
+                            
+                            if exist %TEST_RESULTS_DIR%\\rf_log.html (
+                                echo ✅ Test results available:
+                                echo   - Log: %TEST_RESULTS_DIR%\\rf_log.html
+                                echo   - Report: %TEST_RESULTS_DIR%\\rf_report.html
+                                echo   - Output: %TEST_RESULTS_DIR%\\rf_output.xml
+                            )
+                            
+                            exit /b %RF_EXIT_CODE%
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "🧹 Performing cleanup and archiving results..."
+                
+                // Archive test results
+                if (fileExists("${TEST_RESULTS_DIR}")) {
+                    archiveArtifacts artifacts: "${TEST_RESULTS_DIR}/**", fingerprint: true, allowEmptyArchive: true
+                }
+                
+                // Publish Robot Framework results
+                if (fileExists("${TEST_RESULTS_DIR}/output.xml") || fileExists("${TEST_RESULTS_DIR}/rf_output.xml")) {
+                    step([
+                        $class: 'RobotPublisher',
+                        outputPath: TEST_RESULTS_DIR,
+                        outputFileName: fileExists("${TEST_RESULTS_DIR}/output.xml") ? 'output.xml' : 'rf_output.xml',
+                        reportFileName: 'rf_report.html',
+                        logFileName: 'rf_log.html',
+                        disableArchiveOutput: false,
+                        passThreshold: 100.0,
+                        unstableThreshold: 90.0,
+                        otherFiles: '**/*.png,**/*.jpg'
+                    ])
+                }
+                
+                // Stop test server unless requested to keep running
+                if (!params.KEEP_SERVER_RUNNING) {
+                    if (isUnix()) {
+                        sh '''
+                            if [ -f ${TEST_RESULTS_DIR}/server.pid ]; then
+                                SERVER_PID=$(cat ${TEST_RESULTS_DIR}/server.pid)
+                                echo "Stopping test server (PID: $SERVER_PID)..."
+                                
+                                if kill -0 $SERVER_PID 2>/dev/null; then
+                                    kill $SERVER_PID
+                                    sleep 2
+                                    
+                                    # Force kill if still running
+                                    if kill -0 $SERVER_PID 2>/dev/null; then
+                                        echo "Force killing server..."
+                                        kill -9 $SERVER_PID
+                                    fi
+                                    echo "✅ Test server stopped"
+                                else
+                                    echo "Server already stopped"
+                                fi
+                                
+                                rm -f ${TEST_RESULTS_DIR}/server.pid
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            echo Cleaning up test server processes...
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *start_server.py*" 2>nul || echo No server processes found
+                            if exist %TEST_RESULTS_DIR%\\server.pid del %TEST_RESULTS_DIR%\\server.pid
+                        '''
+                    }
+                } else {
+                    echo "ℹ️ Test server left running as requested"
+                }
+                
+                // Clean up old test results (keep last 10)
+                if (isUnix()) {
+                    sh '''
+                        find . -name "rf_test_results_*" -type d -mtime +10 -exec rm -rf {} + 2>/dev/null || true
+                    '''
+                } else {
+                    bat '''
+                        forfiles /m rf_test_results_* /d -10 /c "cmd /c rmdir /s /q @path" 2>nul || echo No old results to clean
+                    '''
+                }
+            }
+        }
+        
+        success {
+            echo "✅ Robot Framework tests completed successfully! 🎉"
+            script {
+                // Send success notification if webhook is configured
+                if (env.WEBHOOK_URL) {
+                    sh """
+                        curl -X POST \${WEBHOOK_URL} \\
+                        -H 'Content-Type: application/json' \\
+                        -d '{
+                            "text": "✅ RF Tests Passed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                            "color": "good"
+                        }'
+                    """
+                }
+            }
+        }
+        
+        failure {
+            echo "❌ Robot Framework tests failed!"
+            script {
+                // Show error summary
+                if (fileExists("${TEST_RESULTS_DIR}/server.log")) {
+                    if (isUnix()) {
+                        sh "echo '--- Server Log ---' && tail -20 ${TEST_RESULTS_DIR}/server.log"
+                    } else {
+                        bat "echo --- Server Log --- && type %TEST_RESULTS_DIR%\\server.log"
+                    }
+                }
+                
+                // Send failure notification if webhook is configured
+                if (env.WEBHOOK_URL) {
+                    sh """
+                        curl -X POST \${WEBHOOK_URL} \\
+                        -H 'Content-Type: application/json' \\
+                        -d '{
+                            "text": "❌ RF Tests Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                            "color": "danger"
+                        }'
+                    """
+                }
+            }
+        }
+        
+        unstable {
+            echo "⚠️ Robot Framework tests completed with some failures"
+        }
+        
+        cleanup {
+            script {
+                echo "🧹 Final cleanup..."
+                
+                // Ensure no hanging processes
+                if (isUnix()) {
+                    sh '''
+                        # Kill any remaining python processes related to our tests
+                        pkill -f "start_server.py" 2>/dev/null || true
+                        pkill -f "tornado_game_server" 2>/dev/null || true
+                    '''
+                } else {
+                    bat '''
+                        taskkill /F /IM python.exe /FI "COMMANDLINE eq *tornado*" 2>nul || echo No processes to clean
+                    '''
+                }
+                
+                // Clean up workspace if requested (optional)
+                if (params.CLEAN_WORKSPACE) {
+                    echo "Cleaning workspace as requested..."
+                    deleteDir()
+                }
+            }
+        }
+    }
+}
