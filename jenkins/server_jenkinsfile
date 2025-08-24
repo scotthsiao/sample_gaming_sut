@@ -330,6 +330,39 @@ pipeline {
                         sh '''#!/bin/bash
                             echo "Starting Tornado server on port ${SERVER_PORT}..."
                             
+                            # Clean up any existing server instances first
+                            echo "🧹 Cleaning up existing server instances..."
+                            
+                            if [ -f ${PID_FILE} ]; then
+                                OLD_PID=$(cat ${PID_FILE})
+                                echo "Found existing PID file with PID: $OLD_PID"
+                                
+                                if kill -0 $OLD_PID 2>/dev/null; then
+                                    echo "Stopping existing server process $OLD_PID..."
+                                    kill $OLD_PID 2>/dev/null || true
+                                    sleep 2
+                                    
+                                    # Force kill if still running
+                                    if kill -0 $OLD_PID 2>/dev/null; then
+                                        echo "Force killing process $OLD_PID..."
+                                        kill -9 $OLD_PID 2>/dev/null || true
+                                        sleep 1
+                                    fi
+                                else
+                                    echo "Process $OLD_PID not running"
+                                fi
+                                
+                                rm -f ${PID_FILE}
+                            fi
+                            
+                            # Kill any remaining processes by name
+                            echo "Cleaning up any remaining tornado processes..."
+                            pkill -f "run_tornado_server.py" 2>/dev/null || true
+                            pkill -f "tornado_game_server.py" 2>/dev/null || true
+                            sleep 1
+                            
+                            echo "✅ Cleanup completed"
+                            
                             # Activate virtual environment
                             . ${PYTHON_ENV}/bin/activate
                             
@@ -364,6 +397,34 @@ pipeline {
                     } else {
                         bat '''
                             echo Starting Tornado server on port %SERVER_PORT%...
+                            
+                            REM Clean up any existing server instances first
+                            echo 🧹 Cleaning up existing server instances...
+                            
+                            if exist %PID_FILE% (
+                                set /p OLD_PID=<%PID_FILE%
+                                echo Found existing PID file with PID: !OLD_PID!
+                                
+                                REM Check if process is running and kill it
+                                tasklist /FI "PID eq !OLD_PID!" 2>NUL | find "!OLD_PID!" >NUL
+                                if !ERRORLEVEL! EQU 0 (
+                                    echo Stopping existing server process !OLD_PID!...
+                                    taskkill /PID !OLD_PID! /F 2>NUL
+                                    timeout /t 1 /nobreak >NUL
+                                ) else (
+                                    echo Process !OLD_PID! not running
+                                )
+                                
+                                del /Q %PID_FILE% 2>NUL
+                            )
+                            
+                            REM Kill any remaining tornado processes
+                            echo Cleaning up any remaining tornado processes...
+                            taskkill /F /IM python.exe /FI "WINDOWTITLE eq *tornado*" 2>NUL
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *run_tornado_server*" 2>NUL
+                            timeout /t 1 /nobreak >NUL
+                            
+                            echo ✅ Cleanup completed
                             
                             REM Activate virtual environment
                             call %PYTHON_ENV%\\Scripts\\activate.bat
