@@ -366,15 +366,18 @@ pipeline {
                             # Activate virtual environment
                             . ${PYTHON_ENV}/bin/activate
                             
-                            # Use Python subprocess for robust process isolation
-                            echo "Starting server with Python subprocess isolation..."
-                            python3 start_server_robust.py \\
+                            # Use classic nohup approach for process isolation
+                            echo "Starting server with nohup..."
+                            nohup python3 ${SERVER_SCRIPT} \\
                                 --host ${SERVER_HOST} \\
                                 --port ${SERVER_PORT} \\
                                 --max-connections ${MAX_CONNECTIONS} \\
-                                --pid-file ${PID_FILE} \\
-                                --log-file ${LOG_FILE} \\
-                                --server-script ${SERVER_SCRIPT}
+                                < /dev/null > ${LOG_FILE} 2>&1 &
+                            
+                            # Store PID
+                            echo \$! > ${PID_FILE}
+                            PID=\$(cat ${PID_FILE})
+                            echo "Server started with nohup, PID: \$PID"
                             
                             # Verify server started successfully
                             if [ -f ${PID_FILE} ]; then
