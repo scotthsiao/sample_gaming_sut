@@ -93,32 +93,77 @@ pipeline {
                     if (isUnix()) {
                         // Linux/macOS setup
                         sh '''
-                            echo "Creating Python virtual environment..."
-                            python3 -m venv ${PYTHON_ENV}
+                            echo "Detecting Python installation..."
                             
-                            echo "Activating virtual environment and installing dependencies..."
+                            # Try to find Python executable
+                            PYTHON_CMD=""
+                            if command -v python3 >/dev/null 2>&1; then
+                                PYTHON_CMD="python3"
+                                echo "Found python3: $(which python3)"
+                            elif command -v python >/dev/null 2>&1; then
+                                PYTHON_VERSION=$(python --version 2>&1)
+                                echo "Found python: $PYTHON_VERSION"
+                                if echo "$PYTHON_VERSION" | grep -q "Python 3"; then
+                                    PYTHON_CMD="python"
+                                else
+                                    echo "❌ Python 3 is required, found: $PYTHON_VERSION"
+                                    exit 1
+                                fi
+                            else
+                                echo "❌ Python not found. Please install Python 3.8 or higher"
+                                echo "Available commands:"
+                                which python* 2>/dev/null || echo "No python commands found"
+                                exit 1
+                            fi
+                            
+                            echo "Using Python command: $PYTHON_CMD"
+                            $PYTHON_CMD --version
+                            
+                            echo "Creating Python virtual environment..."
+                            $PYTHON_CMD -m venv ${PYTHON_ENV}
+                            
+                            echo "Activating virtual environment..."
                             . ${PYTHON_ENV}/bin/activate
                             
+                            echo "Python executable in venv: $(which python)"
+                            python --version
+                            
                             echo "Upgrading pip..."
-                            pip install --upgrade pip
+                            python -m pip install --upgrade pip
                             
                             echo "Installing requirements..."
                             if [ -f requirements.txt ]; then
+                                echo "Found requirements.txt, installing dependencies..."
                                 pip install -r requirements.txt
                             else
                                 echo "❌ requirements.txt not found"
+                                ls -la
                                 exit 1
                             fi
                             
-                            echo "Compiling Protocol Buffers..."
-                            if [ -f proto/game_messages.proto ]; then
-                                protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                            echo "Checking for protoc..."
+                            if command -v protoc >/dev/null 2>&1; then
+                                echo "Found protoc: $(which protoc)"
+                                protoc --version
+                                
+                                echo "Compiling Protocol Buffers..."
+                                if [ -f proto/game_messages.proto ]; then
+                                    protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                                    echo "✅ Protocol Buffers compiled successfully"
+                                else
+                                    echo "❌ Protocol Buffers file not found: proto/game_messages.proto"
+                                    ls -la proto/ 2>/dev/null || echo "proto/ directory not found"
+                                    exit 1
+                                fi
                             else
-                                echo "❌ Protocol Buffers file not found"
+                                echo "❌ protoc not found. Please install Protocol Buffers compiler"
+                                echo "On Ubuntu/Debian: apt-get install protobuf-compiler"
+                                echo "On RHEL/CentOS: yum install protobuf-compiler"
+                                echo "On macOS: brew install protobuf"
                                 exit 1
                             fi
                             
-                            echo "✅ Environment setup completed"
+                            echo "✅ Environment setup completed successfully"
                         '''
                     } else {
                         // Windows setup
