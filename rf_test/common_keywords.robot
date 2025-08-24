@@ -65,9 +65,9 @@ Setup Test Environment
     
     Log    Setting up dice game test environment: ${env_name}
     
-    # Use simplified configuration - just set the server URL directly
-    Set Test Variable    ${SERVER_URL}    ws://localhost:8767
-    Set Test Variable    ${TIMEOUT}       60
+    # Use configuration from global_vars.robot (which imports from generated_config.robot)
+    # SERVER_URL and TIMEOUT are already defined in global scope from generated_config.robot
+    Set Test Variable    ${TIMEOUT}       60  # Override timeout for specific tests if needed
     
     # Initialize test tracking (now using native Robot Framework keyword)
     ${test_id}=    Generate Random Username    test

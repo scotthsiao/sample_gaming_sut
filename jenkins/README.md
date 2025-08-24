@@ -1,18 +1,43 @@
 # Jenkins Setup for sample_gaming_sut
 
-This directory contains Jenkins pipeline configuration for automated deployment and management of the Tornado game server.
+This directory contains Jenkins pipeline configuration for automated deployment and management of the Tornado game server using **Docker-in-Docker** for complete process isolation and centralized configuration management.
 
 ## 📁 Files
 
-- **`server_jenkinsfile`** - Main Jenkins pipeline for server control
-- **`setup_jenkins_agent.sh`** - Script to prepare Jenkins agents with required dependencies
+- **`server_jenkinsfile`** - Main Jenkins pipeline with Docker-in-Docker support
+- **`docker-compose.yml`** - Docker Compose configuration for Jenkins container
 - **`README.md`** - This documentation
+
+## 🔧 Key Features
+
+- **Docker-in-Docker**: Game servers run in completely isolated containers
+- **Process Persistence**: Servers survive Jenkins job completion
+- **Configuration Management**: Uses centralized `config.yaml` for all settings
+- **Port Mapping**: Host port 8768 → Container port 8767
+- **File Copying**: Avoids Windows volume mounting issues
+- **Complete Automation**: Pull code → Setup → Deploy → Verify
 
 ## 🚀 Quick Start
 
-### 1. Prepare Jenkins Agent
+### Option 1: Docker Setup (Recommended for Isolation)
 
-First, ensure your Jenkins agent has the required dependencies:
+For Jenkins running in Docker containers:
+
+```bash
+# Clone repository
+git clone https://github.com/scotthsiao/sample_gaming_sut.git
+cd sample_gaming_sut/jenkins
+
+# Start Jenkins with Docker Compose
+docker-compose up -d
+
+# Access Jenkins at http://localhost:8080
+# See DOCKER_SETUP.md for complete guide
+```
+
+### Option 2: Native Setup (Direct Installation)
+
+For Jenkins running directly on host systems:
 
 ```bash
 # Download and run the setup script
@@ -66,8 +91,14 @@ The pipeline supports these actions:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | ACTION | `start` | Action to perform: start/stop/restart/status |
-| SERVER_PORT | `8767` | Port for the Tornado server |
+| SERVER_PORT | `8767` | Internal container port (Docker-in-Docker) |
 | MAX_CONNECTIONS | `200` | Maximum concurrent connections |
+
+**Docker-in-Docker Configuration:**
+- **Host Port**: 8768 (externally accessible)
+- **Container Port**: 8767 (internal)
+- **Network**: `dockers_jenkins-network` (isolated)
+- **Process Isolation**: Complete separation from Jenkins process
 
 ## 🔧 Manual Agent Setup
 
@@ -119,11 +150,15 @@ curl -sSL https://raw.githubusercontent.com/scotthsiao/sample_gaming_sut/main/je
 
 ## 📁 Pipeline Workflow
 
-### Start Action Flow
+### Start Action Flow (Docker-in-Docker)
 1. **Checkout Code** - Pull latest from GitHub
-2. **Setup Environment** - Create venv, install dependencies, compile proto files
-3. **Start Server** - Launch Tornado server in background
-4. **Server Status** - Verify server is running
+2. **Setup Environment** - Create Python venv, install dependencies, compile proto files
+3. **Stop Existing Containers** - Clean up any existing game server containers
+4. **Start Docker Container** - Create new isolated container with Python 3.11
+5. **Copy Files** - Copy project files to container (avoids volume mount issues)
+6. **Install Dependencies** - Install requirements.txt inside container
+7. **Start Server** - Launch Tornado server inside container
+8. **Verify Status** - Confirm container and server are running
 
 ### Stop Action Flow
 1. **Stop Server** - Gracefully shutdown server process
@@ -139,25 +174,40 @@ curl -sSL https://raw.githubusercontent.com/scotthsiao/sample_gaming_sut/main/je
 ### Status Action Flow
 1. **Server Status** - Check process status, logs, and network ports
 
-## 🗂️ File Locations
+## 🗂️ File Locations & Docker Integration
 
-The pipeline creates these files in the Jenkins workspace:
-
+**Jenkins Workspace Files:**
 | File | Purpose |
 |------|---------|
-| `tornado_server.pid` | Process ID of running server |
+| `tornado_server.pid` | Docker container ID (not process PID) |
 | `tornado_server.log` | Server output and error logs |
-| `venv/` | Python virtual environment |
+| `venv/` | Python virtual environment (for Jenkins) |
 | `requirements.txt` | Python dependencies |
 | `proto/game_messages.proto` | Protocol Buffers schema |
+
+**Docker Container Structure:**
+```
+/app/ (inside container)
+├── requirements.txt
+├── run_tornado_server.py
+├── src/
+├── proto/
+└── [all project files]
+```
+
+**Configuration Management:**
+- `config.yaml` → Master configuration file
+- `generated_config.robot` → Auto-generated Robot Framework settings
+- Jenkins pipeline uses `config_loader.py` for dynamic configuration
 
 ## 🔍 Monitoring
 
 ### Server Status Information
-- **Process Status**: PID and running state
-- **Network Ports**: Listening ports and connections
-- **Recent Logs**: Last 10 lines of server output
-- **System Processes**: All Python processes
+- **Container Status**: Docker container running state and ID
+- **Network Ports**: Host port 8768 → Container port 8767 mapping
+- **Container Logs**: Server output from Docker container
+- **Process Isolation**: Game server completely isolated from Jenkins
+- **Configuration**: Dynamic settings from `config.yaml`
 
 ### Log Management
 - Logs are automatically archived as Jenkins artifacts
@@ -182,13 +232,16 @@ The pipeline creates these files in the Jenkins workspace:
 - Check the workspace directory structure
 
 **"Port already in use"**
-- Another server instance is running
+- Another Docker container is using port 8768
 - Run the pipeline with ACTION=stop first
-- Or choose a different SERVER_PORT
+- Check: `docker ps` for running containers
+- Force cleanup: `docker stop game-server-instance && docker rm game-server-instance`
 
 **Permission denied errors**
-- Ensure Jenkins agent has write permissions to workspace
-- Check that ports are not restricted by firewall
+- Ensure Jenkins container has Docker access
+- Check Docker daemon is running: `docker ps`
+- Verify Docker-in-Docker permissions
+- Check that ports 8768 are not restricted by firewall
 
 **WSL-specific issues**
 - **"python3: not found" in WSL**: Install Python in WSL, not Windows
@@ -215,14 +268,17 @@ netstat -tlnp | grep 8767
 
 Check server status:
 ```bash
-# Look for server processes
-ps aux | grep tornado
+# Look for Docker containers
+docker ps | grep game-server
 
-# Check server logs
-tail -f tornado_server.log
+# Check container logs
+docker logs game-server-instance
 
-# Verify network connectivity
-telnet localhost 8767
+# Verify network connectivity (host port)
+telnet localhost 8768
+
+# Access container shell
+docker exec -it game-server-instance bash
 ```
 
 ## 🔐 Security Considerations

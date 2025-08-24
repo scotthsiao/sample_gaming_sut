@@ -1,9 +1,9 @@
 # Functional Specification for sample_gaming_sut
 
-**Document Version:** 1.3  
-**Date:** August 21, 2025  
+**Document Version:** 1.4  
+**Date:** August 24, 2025  
 **Project:** Sample Gaming System Under Test  
-**Purpose:** Tutorial and Testing Framework for WebSocket-based Gaming Systems
+**Purpose:** Tutorial and Testing Framework for WebSocket-based Gaming Systems with Docker-in-Docker CI/CD
 
 ---
 
@@ -40,6 +40,9 @@ The `sample_gaming_sut` is a WebSocket-based gambling application designed as a 
 - Dice-based gambling mechanics
 - In-memory state management
 - User authentication and session management
+- **Docker-in-Docker CI/CD Pipeline** for complete process isolation
+- **Centralized Configuration Management** with single source of truth
+- **Jenkins Automation** with containerized deployment
 
 **Target Audience:** Developers learning WebSocket programming, game development patterns, and testing methodologies for real-time systems.
 
@@ -142,9 +145,9 @@ While this is a tutorial project, it simulates real-world gambling application r
 - **Connection Manager:** Handles WebSocket connection lifecycle
 - **Message Handler:** Processes incoming/outgoing Protocol Buffers messages
 - **Game Interface:** Provides user interaction capabilities
-- **State Synchronizer:** Maintains local game state consistency
+- **State Synchronizer:** Maintains local game state consistency\n\n**CI/CD Components:**\n- **Jenkins Pipeline:** Automated deployment with Docker-in-Docker isolation\n- **Docker Containers:** Isolated Python 3.11 environments for game server\n- **Configuration Synchronization:** Auto-updates all config files from config.yaml\n- **Robot Framework Integration:** Automated testing with dynamic configuration\n\n### 4.3 Docker-in-Docker Architecture\n\n```\n┌─────────────────────────────────────────────────────────────┐\n│                       Host System                          │\n│                                                             │\n│  ┌─────────────────────┐    ┌──────────────────────────┐  │\n│  │   Jenkins Container │    │   Game Server Container   │  │\n│  │   (Python 3.11)     │    │   (Python 3.11-slim)     │  │\n│  │                     │    │                          │  │\n│  │ ┌─────────────────┐ │    │ ┌──────────────────────┐ │  │\n│  │ │  Pipeline       │ │    │ │  Tornado Server      │ │  │\n│  │ │  - Pull Code    │ │────┼─┤  - Port 8767         │ │  │\n│  │ │  - Copy Files   │ │    │ │  - Game Engine       │ │  │\n│  │ │  - Config Mgmt  │ │    │ │  - WebSocket Handler │ │  │\n│  │ └─────────────────┘ │    │ └──────────────────────┘ │  │\n│  └─────────────────────┘    └──────────────────────────┘  │\n│           │                            │                  │\n│           └──────── Docker API ────────┘                  │\n│                                                            │\n│  Port Mapping: 8080 (Jenkins) | 8768:8767 (Game Server)  │\n└─────────────────────────────────────────────────────────────┘\n                      │                     │\n                      ▼                     ▼\n              Jenkins Web UI         WebSocket Clients\n           http://localhost:8080   ws://localhost:8768\n```\n\n**Process Isolation Benefits:**\n- **Complete Separation:** Game server runs in isolated container, cannot be killed by Jenkins job completion\n- **Network Isolation:** Containers communicate via dedicated Docker network\n- **File Isolation:** Project files copied to container, avoiding Windows volume mount issues\n- **Port Mapping:** Host port 8768 maps to container port 8767 for external access
 
-### 4.3 Game Logic Flow
+### 4.4 Game Logic Flow
 
 The following Mermaid flowchart illustrates the complete game logic flow from user connection to game completion:
 
@@ -934,37 +937,75 @@ robot --dryrun tests/          # Syntax validation
 ### 13.2 Software Requirements
 
 **Python Environment:**
-- Python 3.8 or higher
+- Python 3.8 or higher (Python 3.11 recommended for Docker containers)
 - Virtual environment support
 - pip package manager
 
 **Required Python Packages:**
 ```
+tornado>=6.0
 websockets>=10.0
 protobuf>=4.0
 bcrypt>=3.2
 python-dateutil>=2.8
+pyyaml>=6.0  # For centralized configuration
 asyncio (built-in)
 json (built-in)
 logging (built-in)
 ```
 
-### 13.3 Configuration
+**Docker Environment (Recommended):**
+- Docker Engine 20.0 or higher
+- Docker Compose 2.0 or higher
+- For Jenkins CI/CD: Docker-in-Docker support
+- Network ports: 8080 (Jenkins), 8767 (direct), 8768 (Docker-in-Docker)
 
-**Server Configuration:**
-```python
-# config.py
-SERVER_CONFIG = {
-    'host': '0.0.0.0',
-    'port': 8765,
-    'max_connections': 100,
-    'session_timeout': 1800,  # 30 minutes
-    'room_capacity': 50,
-    'default_balance': 1000000,
-    'max_bet_amount': 1000,
-    'min_bet_amount': 1
-}
+### 13.3 Configuration Management
+
+**Centralized Configuration System:**
+The system uses a **single source of truth** configuration approach with `config.yaml` as the master configuration file.
+
+```yaml
+# config.yaml - Master Configuration
+server:
+  host: "0.0.0.0"
+  external_host: "localhost"
+  internal_port: 8767
+  jenkins_direct_port: 8767
+  docker_host_port: 8768
+  max_connections: 200
+  timeout: 30
+  connection_timeout: 10
+  session_timeout: 1800  # 30 minutes
+  room_capacity: 50
+  default_balance: 1000000
+  max_bet_amount: 1000
+  min_bet_amount: 1
+
+active:
+  environment: "development"
+  deployment_mode: "docker_in_docker"  # or "jenkins_direct"
+
+deployment:
+  docker_in_docker:
+    url_template: "ws://{external_host}:{docker_host_port}"
+  jenkins_direct:
+    url_template: "ws://{external_host}:{jenkins_direct_port}"
+
+environments:
+  development:
+    server:
+      max_connections: 200
+  production:
+    server:
+      max_connections: 500
+      timeout: 60
 ```
+
+**Configuration Management Tools:**
+- `config_loader.py`: Python configuration management system
+- `update_jenkins_config.py`: Synchronizes all config files from config.yaml
+- `rf_test/generated_config.robot`: Auto-generated Robot Framework variables
 
 **Logging Configuration:**
 ```python
@@ -977,31 +1018,104 @@ LOGGING_CONFIG = {
 }
 ```
 
-### 13.4 Deployment Steps
+### 13.4 Deployment Options
 
-1. **Environment Setup:**
-   ```bash
-   python -m venv game_env
-   source game_env/bin/activate  # Linux/Mac
-   # or game_env\Scripts\activate  # Windows
-   pip install -r requirements.txt
-   ```
+#### Option 1: Docker-in-Docker Deployment (Recommended)
 
-2. **Protocol Buffers Compilation:**
-   ```bash
-   protoc --python_out=. --pyi_out=. proto/game_messages.proto
-   ```
+**1. Docker Environment Setup:**
+```bash
+# Start Jenkins with Docker-in-Docker support
+cd dockers
+docker-compose up -d
 
-3. **Server Startup:**
-   ```bash
-   python game_server.py --config config.py --port 8765
-   ```
+# Access Jenkins at http://localhost:8080
+# Get initial admin password
+docker-compose logs jenkins 2>&1 | grep "initialAdminPassword"
+```
 
-4. **Health Check:**
-   ```bash
-   # Verify server is accepting connections
-   wscat -c ws://localhost:8765
-   ```
+**2. Jenkins Pipeline Configuration:**
+- Create Pipeline job pointing to `jenkins/server_jenkinsfile`
+- Repository: `https://github.com/scotthsiao/sample_gaming_sut.git`
+- Branch: `*/main`
+
+**3. Automated Deployment:**
+```bash
+# Jenkins pipeline automatically:
+# 1. Pulls latest code from GitHub
+# 2. Loads configuration from config.yaml
+# 3. Creates isolated Docker container (Python 3.11)
+# 4. Copies project files to container
+# 5. Installs dependencies inside container
+# 6. Starts Tornado server (container:8767 → host:8768)
+# 7. Verifies container status and connectivity
+```
+
+**4. Health Check:**
+```bash
+# Verify Docker-in-Docker server
+wscat -c ws://localhost:8768  # Host port
+
+# Check container status
+docker ps | grep game-server
+docker logs game-server-instance
+```
+
+#### Option 2: Direct Deployment
+
+**1. Environment Setup:**
+```bash
+python -m venv game_env
+source game_env/bin/activate  # Linux/Mac
+# or game_env\Scripts\activate  # Windows
+pip install -r requirements.txt
+```
+
+**2. Configuration Setup:**
+```bash
+# Apply centralized configuration
+python config_loader.py --export-robot
+
+# Update all config files from config.yaml
+python update_jenkins_config.py
+```
+
+**3. Protocol Buffers Compilation:**
+```bash
+protoc --python_out=. --pyi_out=. proto/game_messages.proto
+```
+
+**4. Server Startup:**
+```bash
+# Uses config.yaml settings automatically
+python run_tornado_server.py
+
+# Or with custom overrides
+python run_tornado_server.py --host 0.0.0.0 --port 8767 --max-connections 200
+```
+
+**5. Health Check:**
+```bash
+# Verify direct server
+wscat -c ws://localhost:8767  # Direct port
+```
+
+#### Option 3: Testing Deployment
+
+**1. Robot Framework Tests:**
+```bash
+cd rf_test
+robot tests/  # Automatically uses config from config.yaml
+robot --include smoke tests/  # Run critical tests only
+```
+
+**2. Configuration Verification:**
+```bash
+# View current configuration
+python config_loader.py --summary
+
+# Test configuration consistency
+robot --dryrun tests/
+```
 
 ---
 
@@ -1241,6 +1355,7 @@ message ErrorResponse {
 | 1.1 | August 16, 2025 | System | Updated bet_id from int64 to string (UUID), updated protoc commands to include --pyi_out |
 | 1.2 | August 18, 2025 | System | Updated room configuration to match server (10 rooms with 50 capacity) |
 | 1.3 | August 21, 2025 | System | Added comprehensive Ultra-Compact Robot Framework Test Suite documentation |
+| 1.4 | August 24, 2025 | System | Added Docker-in-Docker CI/CD, centralized configuration management, Jenkins automation |
 
 **Review and Approval:**
 

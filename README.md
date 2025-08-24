@@ -29,11 +29,28 @@ sample_gaming_sut/
 ├── tests/                     # Test suite
 │   ├── test_game_system.py    # Comprehensive unittest test suite
 │   └── test_game_system_pytest.py # Pytest version of test suite
+├── rf_test/                   # Ultra-compact Robot Framework test suite
+│   ├── tests/                 # 32 tests in 4 files (100% pass rate)
+│   ├── libraries/             # Minimal Python libraries
+│   ├── global_vars.robot      # All variables (single source)
+│   ├── keywords.robot         # All keywords consolidated
+│   └── generated_config.robot # Auto-generated from config.yaml
+├── jenkins/                   # Jenkins CI/CD pipeline
+│   ├── server_jenkinsfile     # Main pipeline with Docker-in-Docker
+│   ├── docker-compose.yml     # Jenkins containerization
+│   └── README.md              # Jenkins setup guide
+├── dockers/                   # Docker environment
+│   ├── docker-compose.yml     # Complete Docker stack
+│   ├── jenkins/Dockerfile     # Custom Jenkins image
+│   └── README.md              # Docker setup guide
+├── config.yaml                # Master configuration (single source of truth)
+├── config_loader.py           # Configuration management system
+├── update_jenkins_config.py   # Configuration synchronization
 ├── run_tornado_server.py      # Primary server entry point (Tornado-based)
 ├── run_server.py              # Alternative server entry point (websockets-based)
 ├── run_client.py              # Client entry point
 ├── run_tests.py               # Test runner entry point
-├── config.py                  # Configuration management
+├── config.py                  # Legacy configuration (deprecated)
 ├── requirements.txt           # Python dependencies
 └── README.md                  # Documentation
 ```
@@ -74,11 +91,14 @@ sample_gaming_sut/
 
 **Primary Server (Tornado-based):**
 ```bash
-# Basic server startup (runs on port 8767 by default)
+# Basic server startup (uses config.yaml settings)
 python run_tornado_server.py
 
-# With custom configuration
+# With custom configuration (overrides config.yaml)
 python run_tornado_server.py --host 0.0.0.0 --port 8767 --max-connections 200
+
+# For Docker-in-Docker mode (Jenkins pipeline)
+# Server runs in isolated container on host port 8768
 ```
 
 **Alternative Server (websockets-based):**
@@ -178,31 +198,48 @@ All messages use Protocol Buffers with binary serialization:
 
 ## Configuration
 
-### Environment Variables
+### Single Source of Truth Configuration
 
+The project uses a centralized configuration management system with `config.yaml` as the single source of truth for all server settings.
+
+**Configuration Files:**
+- `config.yaml` - Master configuration file
+- `config_loader.py` - Configuration management system
+- `rf_test/generated_config.robot` - Auto-generated Robot Framework variables
+
+**Configuration Management:**
 ```bash
-# Server configuration (Tornado server - primary)
-GAME_HOST=localhost
-GAME_PORT=8767
-GAME_MAX_CONNECTIONS=100
-GAME_SESSION_TIMEOUT=1800
+# View current configuration
+python config_loader.py --summary
 
-# Alternative server configuration (websockets server)
-# GAME_PORT=8765
+# Export Robot Framework variables
+python config_loader.py --export-robot
 
-# Game settings
-GAME_MAX_BETS_PER_ROUND=10
-GAME_MIN_BET=1
-GAME_MAX_BET=1000
-GAME_DEFAULT_BALANCE=1000000
+# Update all configuration files from config.yaml
+python update_jenkins_config.py
+```
 
-# Client configuration
-GAME_SERVER_URL=ws://localhost:8767
-GAME_CONNECTION_TIMEOUT=10
+**config.yaml Structure:**
+```yaml
+server:
+  host: "0.0.0.0"
+  external_host: "localhost"
+  internal_port: 8767
+  jenkins_direct_port: 8767
+  docker_host_port: 8768
+  max_connections: 200
+  timeout: 30
+  connection_timeout: 10
 
-# Logging
-GAME_LOG_LEVEL=INFO
-GAME_LOG_FILE=game_server.log
+active:
+  environment: "development"
+  deployment_mode: "docker_in_docker"
+
+deployment:
+  docker_in_docker:
+    url_template: "ws://{external_host}:{docker_host_port}"
+  jenkins_direct:
+    url_template: "ws://{external_host}:{jenkins_direct_port}"
 ```
 
 ### Default Test Users
@@ -327,6 +364,12 @@ robot --include smoke tests/
 robot --include e2e tests/
 ```
 
+**🔧 Configuration Integration:**
+- Tests automatically use settings from `config.yaml`
+- Server URL dynamically configured: `ws://localhost:8768` (Docker-in-Docker mode)
+- No hardcoded ports or URLs in test files
+- Configuration changes applied via `python update_jenkins_config.py`
+
 **📊 Complete Test Coverage (32/32 tests):**
 - **Connection Tests (7)**: WebSocket connectivity, timeouts, reconnection
 - **Authentication Tests (7)**: Login/logout, session management, multiple user types
@@ -343,6 +386,31 @@ robot --include e2e tests/
 
 ### Docker Support
 
+The project includes comprehensive Docker support for development and CI/CD:
+
+**Docker Compose Services:**
+```bash
+# Start Jenkins with Docker-in-Docker support
+cd dockers
+docker-compose up -d
+
+# Access Jenkins at http://localhost:8080
+# Game server available at ws://localhost:8768 (when running)
+```
+
+**Jenkins Pipeline with Docker-in-Docker:**
+- **Complete Isolation**: Game servers run in separate Docker containers
+- **Process Persistence**: Servers survive Jenkins job completion
+- **Port Mapping**: Host port 8768 → Container port 8767
+- **File Copying**: Avoids Windows volume mounting issues
+
+**Docker Features:**
+- **Custom Jenkins Image**: Python 3.11 + Protocol Buffers pre-installed
+- **Docker-in-Docker**: Full container isolation for game server processes
+- **Configuration Management**: Centralized config applied to all containers
+- **Network Isolation**: Private Docker network for service communication
+
+**Basic Docker Deployment:**
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app

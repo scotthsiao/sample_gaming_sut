@@ -11,22 +11,28 @@ This ultra-simplified test suite validates a dice gambling game that uses:
 - Dice betting mechanics with 6x payout multiplier
 - Real-time state synchronization
 
-## 🆕 Ultra-Compaction Achievements
+## 🆕 Ultra-Compaction + Configuration Management Achievements
 
 ### Extreme Simplification Results
 - **File Count Reduced**: From 11 files to 8 files (27% reduction)
 - **Code Lines Eliminated**: 790+ lines of Python wrapper code removed
 - **Zero Nested Folders**: All keywords consolidated into single file
 - **Native Robot Framework**: 100% Robot Framework, no custom Python libraries needed
-- **Single Configuration**: All variables in one `global_vars.robot` file
-- **Beginner Friendly**: Perfect for Robot Framework tutorials
+- **Configuration Revolution**: Single source of truth for ALL port/URL settings
+- **Auto-Generated Config**: `generated_config.robot` created from master `config.yaml`
+- **Zero Hardcoded Values**: No scattered ports across multiple files
+- **Docker-Aware**: Automatically uses correct ports for Docker-in-Docker (8768) or direct (8767)
+- **Beginner Friendly**: Perfect for Robot Framework tutorials with enterprise-grade config management
 
-### Test Coverage Maintained  
+### Test Coverage + Configuration Integration
 - **32 of 32 tests passing** (100% success rate)
 - **Complete Protocol Buffers validation** for all message types
 - **Multi-bet scenario testing** with proper round ID management
 - **Real-time balance persistence** validation across sessions
 - **All error scenarios covered** (authentication, connection, game logic)
+- **Dynamic Configuration**: Tests automatically use settings from `config.yaml`
+- **Docker Integration**: Tests work with both Docker-in-Docker and direct deployment
+- **Zero Configuration Drift**: All environments use same centralized settings
 
 ## 📁 Ultra-Compact Project Structure
 
@@ -36,6 +42,7 @@ rf_test/
 ├── global_vars.robot                   # ALL variables and test data (58 lines)
 ├── keywords.robot                      # ALL keywords consolidated (230 lines)  
 ├── common_keywords.robot               # Test setup/teardown (181 lines)
+├── generated_config.robot              # Auto-generated from config.yaml (SINGLE SOURCE)
 │
 ├── tests/                              # Test suite files (4 files)
 │   ├── connection_tests.robot          # WebSocket connection tests (7 tests)
@@ -76,9 +83,11 @@ rf_test/
 
 1. **Start the dice gambling game server** (refer to main project documentation)
 
-2. **Run all tests (recommended)**
+2. **Run all tests (with auto-configured server URL)**
    ```bash
    robot tests/
+   # Tests automatically connect to ws://localhost:8768 (Docker-in-Docker mode)
+   # or ws://localhost:8767 (direct mode) based on config.yaml
    ```
 
 3. **Run dry run for syntax validation**
@@ -152,11 +161,46 @@ rf_test/
 
 ## 🔧 Configuration
 
-### Server Configuration
-Edit `global_vars.robot`:
-```robot
-${SERVER_URL}           ws://localhost:8767
+### Server Configuration (Single Source of Truth)
+
+**Configuration is now centrally managed! ✨**
+
+Instead of editing Robot Framework files directly, all configuration is managed through the project's centralized system:
+
+**1. Master Configuration File:**
+```yaml
+# ../config.yaml (project root)
+server:
+  host: "0.0.0.0"
+  external_host: "localhost"
+  docker_host_port: 8768  # Robot Framework connects here
+active:
+  deployment_mode: "docker_in_docker"  # Sets URL template
 ```
+
+**2. Auto-Generated Robot Framework Config:**
+```robot
+# generated_config.robot (auto-generated - DO NOT EDIT)
+${SERVER_URL}    ws://localhost:8768
+${TIMEOUT}       30
+${CONNECTION_TIMEOUT}    10
+```
+
+**3. Applying Configuration Changes:**
+```bash
+# Update config.yaml, then regenerate Robot Framework variables
+python ../config_loader.py --export-robot
+
+# Or update all configuration files at once
+python ../update_jenkins_config.py
+```
+
+**🔒 Benefits of Centralized Configuration:**
+- **Single Source of Truth**: One file controls all port/URL settings
+- **No Manual Edits**: Robot Framework config auto-generated
+- **Environment-Aware**: Automatically switches between Docker-in-Docker (8768) and direct (8767)
+- **Jenkins Integration**: Pipeline automatically applies configuration changes
+- **Error Prevention**: No more scattered hardcoded ports across files
 
 ### Test Users
 All test users defined in `global_vars.robot`:
@@ -278,25 +322,30 @@ robot --exclude negative tests/
 robot --exclude "rapid_betting OR error_recovery" tests/
 ```
 
-## 🔑 Key Features for Beginners
+## 🔑 Key Features for Beginners + Enterprise Configuration
 
-### Ultra-Simple Structure
+### Ultra-Simple Structure with Enterprise Config
 - **Single Keyword File**: All keywords in `keywords.robot` (230 lines)
 - **Single Variable File**: All test data in `global_vars.robot` (58 lines)
-- **No Complex Dependencies**: Only standard Robot Framework libraries
+- **Auto-Generated Config**: `generated_config.robot` from master `config.yaml`
+- **No Hardcoded Values**: Zero scattered ports or URLs in code
 - **Clear Naming**: Descriptive keyword and variable names
 
-### Educational Benefits
+### Educational + Professional Benefits
 - **Perfect for Tutorials**: Minimal file structure, easy to understand
+- **Enterprise Config Management**: Single source of truth patterns
 - **Real Protocol Buffers**: Actual WebSocket and protobuf communication
 - **Complete Coverage**: 32 tests covering all game aspects
 - **Error Handling**: Proper error scenarios and recovery
+- **Docker Integration**: Works with containerized and direct deployment
+- **Configuration Best Practices**: Demonstrates professional config management
 
-### Consolidated Keywords
-All keywords organized in `keywords.robot`:
+### Consolidated Keywords with Dynamic Config
+All keywords in `keywords.robot` automatically use centralized settings:
 - **Authentication Keywords**: Login, session management
-- **Game Keywords**: Betting, room joining, result retrieval
+- **Game Keywords**: Betting, room joining, result retrieval  
 - **Utility Keywords**: User/room data lookup, validation
+- **Connection Management**: Auto-configured server URLs from `config.yaml`
 
 ## 🐛 Troubleshooting
 
@@ -324,7 +373,7 @@ robot --loglevel DEBUG tests/
 1. Start with dry run: `robot --dryrun tests/`
 2. Check individual test suites first
 3. Review `log.html` for detailed execution steps
-4. Verify server is running on ws://localhost:8767
+4. Verify server is running on ws://localhost:8768
 
 ## 📄 Tutorial Usage
 

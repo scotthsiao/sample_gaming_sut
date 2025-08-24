@@ -1,0 +1,49 @@
+# Sample Gaming SUT - Single Source of Truth Configuration
+# All server connection settings centralized here
+
+server:
+  # Host configuration
+  host: "0.0.0.0"                    # Server bind address
+  external_host: "localhost"        # External access address
+  
+  # Port configuration
+  internal_port: 8767                # Port inside containers/processes
+  jenkins_direct_port: 8767         # Port for Jenkins direct execution  
+  docker_host_port: 8768            # Host port for Docker-in-Docker containers
+  
+  # Connection settings
+  max_connections: 200
+  timeout: 30
+  connection_timeout: 10
+
+# Environment-specific overrides
+environments:
+  development:
+    server:
+      external_host: "localhost"
+      docker_host_port: 8768
+      
+  testing:
+    server:
+      external_host: "localhost"
+      docker_host_port: 8768
+      
+  ci:
+    server:
+      external_host: "localhost"  
+      docker_host_port: 8768
+
+# Deployment modes
+deployment:
+  jenkins_direct:
+    description: "Server runs directly in Jenkins container"
+    url_template: "ws://{external_host}:{jenkins_direct_port}"
+    
+  docker_in_docker:
+    description: "Server runs in separate Docker container managed by Jenkins"
+    url_template: "ws://{external_host}:{docker_host_port}"
+
+# Current active configuration
+active:
+  environment: "development"
+  deployment_mode: "docker_in_docker"  # Can be: jenkins_direct, docker_in_docker

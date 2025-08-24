@@ -1,12 +1,12 @@
+*** Settings ***
+# Import generated configuration (single source of truth)
+Resource    generated_config.robot
+
 *** Variables ***
 # Global variables - ultra-minimal set for dice gambling game
 
-# Server Configuration
-${SERVER_URL}           ws://localhost:8767
-
-# Test Configuration  
-${TIMEOUT}              30
-${CONNECTION_TIMEOUT}   10
+# Note: SERVER_URL, TIMEOUT, CONNECTION_TIMEOUT are now imported from generated_config.robot
+# To change these values, edit config.yaml and run: python config_loader.py --export-robot
 
 # Test Environment
 ${DEFAULT_BALANCE}      1000000
