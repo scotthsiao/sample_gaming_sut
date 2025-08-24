@@ -377,21 +377,34 @@ pipeline {
                             docker stop game-server-instance 2>/dev/null || true
                             docker rm game-server-instance 2>/dev/null || true
                             
-                            # Start game server in detached container
+                            # Create container and copy files (avoid volume mount issues)
                             CONTAINER_ID=\$(docker run -d \\
                                 --name game-server-instance \\
                                 --network dockers_jenkins-network \\
                                 -p 8768:8767 \\
-                                -v \$(pwd):/app \\
-                                -w /app \\
                                 python:3.11-slim \\
-                                bash -c "
-                                    pip install -r requirements.txt && \\
-                                    python3 ${SERVER_SCRIPT} \\
-                                        --host 0.0.0.0 \\
-                                        --port 8767 \\
-                                        --max-connections ${MAX_CONNECTIONS}
-                                ")
+                                tail -f /dev/null)
+                            
+                            echo "Container created: \$CONTAINER_ID"
+                            
+                            # Create app directory and copy files
+                            docker exec \$CONTAINER_ID mkdir -p /app
+                            docker cp requirements.txt \$CONTAINER_ID:/app/
+                            docker cp ${SERVER_SCRIPT} \$CONTAINER_ID:/app/
+                            docker cp src \$CONTAINER_ID:/app/
+                            docker cp proto \$CONTAINER_ID:/app/
+                            
+                            echo "Files copied to container, starting server..."
+                            
+                            # Install dependencies and start server
+                            docker exec -d \$CONTAINER_ID bash -c "
+                                cd /app && \\
+                                pip install -r requirements.txt && \\
+                                python3 ${SERVER_SCRIPT} \\
+                                    --host 0.0.0.0 \\
+                                    --port 8767 \\
+                                    --max-connections ${MAX_CONNECTIONS}
+                            "
                             
                             # Store container ID 
                             echo \$CONTAINER_ID > ${PID_FILE}
