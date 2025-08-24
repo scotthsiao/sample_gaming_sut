@@ -390,7 +390,7 @@ pipeline {
                             # Create app directory and copy files
                             docker exec \$CONTAINER_ID mkdir -p /app
                             docker cp requirements.txt \$CONTAINER_ID:/app/
-                            docker cp ${SERVER_SCRIPT} \$CONTAINER_ID:/app/
+                            docker cp scripts/ \$CONTAINER_ID:/app/
                             docker cp src \$CONTAINER_ID:/app/
                             docker cp proto \$CONTAINER_ID:/app/
                             
@@ -400,7 +400,7 @@ pipeline {
                             docker exec -d \$CONTAINER_ID bash -c "
                                 cd /app && \\
                                 pip install -r requirements.txt && \\
-                                python3 ${SERVER_SCRIPT} \\
+                                python3 scripts/start_server.py \\
                                     --host 0.0.0.0 \\
                                     --port 8767 \\
                                     --max-connections ${MAX_CONNECTIONS}
