@@ -6,9 +6,21 @@
 echo "🔧 Setting up Jenkins Agent for sample_gaming_sut"
 echo "=================================================="
 
-# Function to detect OS
+# Function to detect OS and WSL
 detect_os() {
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Check if running in WSL
+    if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
+        echo "🔍 WSL (Windows Subsystem for Linux) detected"
+        
+        # Determine WSL distribution
+        if [ -f /etc/debian_version ]; then
+            echo "wsl-ubuntu"
+        elif [ -f /etc/redhat-release ]; then
+            echo "wsl-rhel"
+        else
+            echo "wsl-linux"
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if [ -f /etc/debian_version ]; then
             echo "ubuntu"
         elif [ -f /etc/redhat-release ]; then
@@ -30,14 +42,35 @@ install_python() {
     echo "📦 Installing Python 3..."
     
     case $os in
-        "ubuntu")
+        "ubuntu"|"wsl-ubuntu")
+            echo "Installing Python on Ubuntu/WSL Ubuntu..."
+            if [[ $os == "wsl-ubuntu" ]]; then
+                echo "⚠️  WSL detected: Some packages may require Windows interop"
+            fi
             sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv
+            sudo apt-get install -y python3 python3-pip python3-venv python3-dev
             ;;
-        "rhel")
-            sudo yum install -y python3 python3-pip
+        "rhel"|"wsl-rhel")
+            echo "Installing Python on RHEL/WSL RHEL..."
+            if [[ $os == "wsl-rhel" ]]; then
+                echo "⚠️  WSL detected: Some packages may require Windows interop"
+            fi
+            sudo yum install -y python3 python3-pip python3-devel
             # For RHEL 8+
-            sudo dnf install -y python3 python3-pip 2>/dev/null || true
+            sudo dnf install -y python3 python3-pip python3-devel 2>/dev/null || true
+            ;;
+        "linux"|"wsl-linux")
+            echo "Installing Python on generic Linux/WSL..."
+            if [[ $os == "wsl-linux" ]]; then
+                echo "⚠️  WSL detected: Manual installation may be required"
+                echo "Please install Python 3.8+ using your distribution's package manager:"
+                echo "  - Debian/Ubuntu: sudo apt-get install python3 python3-pip python3-venv"
+                echo "  - RHEL/CentOS: sudo yum install python3 python3-pip"
+                echo "  - Fedora: sudo dnf install python3 python3-pip"
+                exit 1
+            fi
+            echo "❌ Generic Linux detected. Please install Python 3.8+ manually."
+            exit 1
             ;;
         "macos")
             if command -v brew >/dev/null 2>&1; then
@@ -49,7 +82,7 @@ install_python() {
             fi
             ;;
         *)
-            echo "❌ Unsupported OS. Please install Python 3.8+ manually."
+            echo "❌ Unsupported OS: $os. Please install Python 3.8+ manually."
             exit 1
             ;;
     esac
@@ -62,13 +95,26 @@ install_protobuf() {
     echo "📦 Installing Protocol Buffers compiler..."
     
     case $os in
-        "ubuntu")
+        "ubuntu"|"wsl-ubuntu")
+            echo "Installing protobuf on Ubuntu/WSL Ubuntu..."
             sudo apt-get install -y protobuf-compiler
             ;;
-        "rhel")
+        "rhel"|"wsl-rhel")
+            echo "Installing protobuf on RHEL/WSL RHEL..."
             sudo yum install -y protobuf-compiler
             # For RHEL 8+
             sudo dnf install -y protobuf-compiler 2>/dev/null || true
+            ;;
+        "linux"|"wsl-linux")
+            if [[ $os == "wsl-linux" ]]; then
+                echo "⚠️  WSL detected: Please install protobuf manually:"
+                echo "  - Debian/Ubuntu: sudo apt-get install protobuf-compiler"
+                echo "  - RHEL/CentOS: sudo yum install protobuf-compiler"
+                echo "  - Fedora: sudo dnf install protobuf-compiler"
+                exit 1
+            fi
+            echo "❌ Generic Linux: Please install protobuf-compiler manually"
+            exit 1
             ;;
         "macos")
             if command -v brew >/dev/null 2>&1; then
@@ -79,7 +125,7 @@ install_protobuf() {
             fi
             ;;
         *)
-            echo "❌ Unsupported OS for automatic protobuf installation"
+            echo "❌ Unsupported OS: $os"
             echo "Please install protobuf-compiler manually"
             exit 1
             ;;

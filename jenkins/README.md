@@ -98,9 +98,24 @@ brew install python@3.11 protobuf
 ```
 
 ### Windows
+
+#### Native Windows
 1. Install Python 3.8+ from [python.org](https://python.org)
 2. Install Protocol Buffers from [releases](https://github.com/protocolbuffers/protobuf/releases)
 3. Add both to system PATH
+
+#### WSL (Windows Subsystem for Linux)
+```bash
+# WSL Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip python3-venv protobuf-compiler
+
+# WSL RHEL/CentOS
+sudo yum install -y python3 python3-pip protobuf-compiler
+
+# Or use the setup script (recommended)
+curl -sSL https://raw.githubusercontent.com/scotthsiao/sample_gaming_sut/main/jenkins/setup_jenkins_agent.sh | bash
+```
 
 ## 📁 Pipeline Workflow
 
@@ -174,6 +189,12 @@ The pipeline creates these files in the Jenkins workspace:
 **Permission denied errors**
 - Ensure Jenkins agent has write permissions to workspace
 - Check that ports are not restricted by firewall
+
+**WSL-specific issues**
+- **"python3: not found" in WSL**: Install Python in WSL, not Windows
+- **Jenkins can't access WSL**: Ensure Jenkins runs in WSL context
+- **Port binding issues**: WSL networking may require Windows firewall configuration
+- **File permissions**: WSL and Windows file permissions can conflict
 
 ### Debug Commands
 

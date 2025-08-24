@@ -93,6 +93,16 @@ pipeline {
                     if (isUnix()) {
                         // Linux/macOS setup
                         sh '''
+                            echo "Detecting system environment..."
+                            
+                            # Check if running in WSL
+                            if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
+                                echo "🔍 WSL (Windows Subsystem for Linux) detected"
+                                WSL_DETECTED=true
+                            else
+                                WSL_DETECTED=false
+                            fi
+                            
                             echo "Detecting Python installation..."
                             
                             # Try to find Python executable
@@ -113,6 +123,17 @@ pipeline {
                                 echo "❌ Python not found. Please install Python 3.8 or higher"
                                 echo "Available commands:"
                                 which python* 2>/dev/null || echo "No python commands found"
+                                
+                                if [ "$WSL_DETECTED" = true ]; then
+                                    echo ""
+                                    echo "🔧 WSL Installation Instructions:"
+                                    echo "  Ubuntu/Debian WSL: sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv"
+                                    echo "  RHEL/CentOS WSL: sudo yum install -y python3 python3-pip"
+                                    echo ""
+                                    echo "Or run the setup script:"
+                                    echo "  curl -sSL https://raw.githubusercontent.com/scotthsiao/sample_gaming_sut/main/jenkins/setup_jenkins_agent.sh | bash"
+                                fi
+                                
                                 exit 1
                             fi
                             
@@ -157,9 +178,21 @@ pipeline {
                                 fi
                             else
                                 echo "❌ protoc not found. Please install Protocol Buffers compiler"
-                                echo "On Ubuntu/Debian: apt-get install protobuf-compiler"
-                                echo "On RHEL/CentOS: yum install protobuf-compiler"
-                                echo "On macOS: brew install protobuf"
+                                
+                                if [ "$WSL_DETECTED" = true ]; then
+                                    echo ""
+                                    echo "🔧 WSL Installation Instructions:"
+                                    echo "  Ubuntu/Debian WSL: sudo apt-get install -y protobuf-compiler"
+                                    echo "  RHEL/CentOS WSL: sudo yum install -y protobuf-compiler"
+                                    echo ""
+                                    echo "Or run the setup script:"
+                                    echo "  curl -sSL https://raw.githubusercontent.com/scotthsiao/sample_gaming_sut/main/jenkins/setup_jenkins_agent.sh | bash"
+                                else
+                                    echo "  Ubuntu/Debian: sudo apt-get install protobuf-compiler"
+                                    echo "  RHEL/CentOS: sudo yum install protobuf-compiler"
+                                    echo "  macOS: brew install protobuf"
+                                fi
+                                
                                 exit 1
                             fi
                             
