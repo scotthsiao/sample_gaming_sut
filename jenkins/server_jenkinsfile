@@ -340,8 +340,9 @@ pipeline {
                                 --max-connections ${MAX_CONNECTIONS} \\
                                 > ${LOG_FILE} 2>&1 &
                             
-                            # Store PID
+                            # Store PID and detach from Jenkins session
                             echo $! > ${PID_FILE}
+                            disown
                             PID=$(cat ${PID_FILE})
                             
                             echo "Server started with PID: $PID"
