@@ -55,10 +55,8 @@ RUN python3 -m pip install --break-system-packages \
     bcrypt \
     python-dateutil
 
-# Create a directory for Jenkins tools and scripts
+# Create a directory for Jenkins tools and scripts (if needed in future)
 RUN mkdir -p /usr/local/jenkins-tools
-COPY setup_jenkins_docker.sh /usr/local/jenkins-tools/
-RUN chmod +x /usr/local/jenkins-tools/*
 
 # Create workspace directory with proper permissions
 RUN mkdir -p /opt/sample_gaming_sut && chown jenkins:jenkins /opt/sample_gaming_sut
