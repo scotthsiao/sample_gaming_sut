@@ -270,6 +270,73 @@ pipeline {
             }
         }
         
+        stage('Cleanup Previous Servers') {
+            steps {
+                script {
+                    echo "🧹 Cleaning up any existing server instances..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            echo "Stopping any existing game server processes..."
+                            
+                            # Kill processes using the target port
+                            echo "Checking for processes using port ${SERVER_PORT}..."
+                            EXISTING_PID=$(lsof -ti:${SERVER_PORT} 2>/dev/null || echo "")
+                            if [ ! -z "$EXISTING_PID" ]; then
+                                echo "Found process using port ${SERVER_PORT}: $EXISTING_PID"
+                                kill $EXISTING_PID 2>/dev/null || true
+                                sleep 2
+                                
+                                # Force kill if still running
+                                if kill -0 $EXISTING_PID 2>/dev/null; then
+                                    echo "Force killing process $EXISTING_PID..."
+                                    kill -9 $EXISTING_PID 2>/dev/null || true
+                                    sleep 1
+                                fi
+                            fi
+                            
+                            # Kill any remaining server processes by name
+                            echo "Cleaning up server processes by name..."
+                            pkill -f "start_server.py" 2>/dev/null || true
+                            pkill -f "tornado_game_server.py" 2>/dev/null || true
+                            pkill -f "scripts/start_server.py" 2>/dev/null || true
+                            
+                            # Clean up Docker containers if any
+                            docker stop game-server-instance 2>/dev/null || true
+                            docker rm game-server-instance 2>/dev/null || true
+                            
+                            sleep 2
+                            
+                            # Verify port is free
+                            if lsof -ti:${SERVER_PORT} >/dev/null 2>&1; then
+                                echo "⚠️ Port ${SERVER_PORT} is still in use after cleanup"
+                                lsof -ti:${SERVER_PORT} | xargs -r ps -p
+                                echo "Waiting additional time for port to be released..."
+                                sleep 5
+                            else
+                                echo "✅ Port ${SERVER_PORT} is now available"
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            echo Stopping any existing game server processes...
+                            
+                            REM Kill processes by name
+                            echo Cleaning up server processes by name...
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *start_server.py*" 2>nul || echo No start_server.py processes found
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *tornado_game_server*" 2>nul || echo No tornado processes found
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *scripts/start_server.py*" 2>nul || echo No scripts/start_server.py processes found
+                            
+                            REM Wait for processes to terminate
+                            timeout /t 3 /nobreak >nul
+                            
+                            echo ✅ Server cleanup completed
+                        '''
+                    }
+                }
+            }
+        }
+        
         stage('Start Test Server') {
             steps {
                 script {
@@ -282,6 +349,15 @@ pipeline {
                             
                             # Create test results directory
                             mkdir -p ${TEST_RESULTS_DIR}
+                            
+                            # Final port check before starting
+                            echo "Final verification that port ${SERVER_PORT} is available..."
+                            if lsof -ti:${SERVER_PORT} >/dev/null 2>&1; then
+                                echo "❌ Port ${SERVER_PORT} is still in use. Cannot start server."
+                                echo "Processes using port ${SERVER_PORT}:"
+                                lsof -ti:${SERVER_PORT} | xargs -r ps -p
+                                exit 1
+                            fi
                             
                             # Start server in background
                             echo "Starting game server on port ${SERVER_PORT}..."
@@ -297,8 +373,16 @@ pipeline {
                             if kill -0 $SERVER_PID 2>/dev/null; then
                                 echo "✅ Game server started successfully (PID: $SERVER_PID)"
                                 echo "Server accessible at ws://${SERVER_HOST}:${SERVER_PORT}"
+                                
+                                # Double-check port is listening
+                                if lsof -ti:${SERVER_PORT} >/dev/null 2>&1; then
+                                    echo "✅ Confirmed: Server is listening on port ${SERVER_PORT}"
+                                else
+                                    echo "⚠️ Warning: Server process running but port not listening"
+                                fi
                             else
                                 echo "❌ Game server failed to start"
+                                echo "Server log contents:"
                                 cat ${TEST_RESULTS_DIR}/server.log
                                 exit 1
                             fi
@@ -462,32 +546,83 @@ pipeline {
                 if (!params.KEEP_SERVER_RUNNING) {
                     if (isUnix()) {
                         sh '''
+                            echo "Stopping test server..."
+                            
+                            # Stop server using PID file if available
                             if [ -f ${TEST_RESULTS_DIR}/server.pid ]; then
                                 SERVER_PID=$(cat ${TEST_RESULTS_DIR}/server.pid)
-                                echo "Stopping test server (PID: $SERVER_PID)..."
+                                echo "Found server PID: $SERVER_PID"
                                 
                                 if kill -0 $SERVER_PID 2>/dev/null; then
-                                    kill $SERVER_PID
-                                    sleep 2
+                                    echo "Stopping server with PID $SERVER_PID..."
+                                    kill $SERVER_PID 2>/dev/null || true
+                                    sleep 3
                                     
                                     # Force kill if still running
                                     if kill -0 $SERVER_PID 2>/dev/null; then
-                                        echo "Force killing server..."
-                                        kill -9 $SERVER_PID
+                                        echo "Force killing server with PID $SERVER_PID..."
+                                        kill -9 $SERVER_PID 2>/dev/null || true
+                                        sleep 1
                                     fi
-                                    echo "✅ Test server stopped"
                                 else
-                                    echo "Server already stopped"
+                                    echo "Server with PID $SERVER_PID already stopped"
                                 fi
                                 
                                 rm -f ${TEST_RESULTS_DIR}/server.pid
                             fi
+                            
+                            # Clean up any remaining processes using the port
+                            echo "Cleaning up processes using port ${SERVER_PORT}..."
+                            REMAINING_PID=$(lsof -ti:${SERVER_PORT} 2>/dev/null || echo "")
+                            if [ ! -z "$REMAINING_PID" ]; then
+                                echo "Found remaining process using port ${SERVER_PORT}: $REMAINING_PID"
+                                kill -9 $REMAINING_PID 2>/dev/null || true
+                                sleep 1
+                            fi
+                            
+                            # Final cleanup by process name
+                            echo "Final cleanup of server processes..."
+                            pkill -9 -f "start_server.py" 2>/dev/null || true
+                            pkill -9 -f "tornado_game_server.py" 2>/dev/null || true
+                            pkill -9 -f "scripts/start_server.py" 2>/dev/null || true
+                            
+                            # Verify port is free
+                            sleep 2
+                            if lsof -ti:${SERVER_PORT} >/dev/null 2>&1; then
+                                echo "⚠️ Warning: Port ${SERVER_PORT} is still in use after cleanup"
+                                lsof -ti:${SERVER_PORT} | xargs -r ps -p || true
+                            else
+                                echo "✅ Port ${SERVER_PORT} is now free"
+                            fi
+                            
+                            echo "✅ Test server cleanup completed"
                         '''
                     } else {
                         bat '''
-                            echo Cleaning up test server processes...
-                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *start_server.py*" 2>nul || echo No server processes found
-                            if exist %TEST_RESULTS_DIR%\\server.pid del %TEST_RESULTS_DIR%\\server.pid
+                            echo Stopping test server...
+                            
+                            REM Stop using PID file if available
+                            if exist %TEST_RESULTS_DIR%\\server.pid (
+                                set /p SERVER_PID=<%TEST_RESULTS_DIR%\\server.pid
+                                echo Found server PID: !SERVER_PID!
+                                tasklist /FI "PID eq !SERVER_PID!" 2>nul | find "!SERVER_PID!" >nul
+                                if !ERRORLEVEL! EQU 0 (
+                                    echo Stopping server with PID !SERVER_PID!...
+                                    taskkill /PID !SERVER_PID! /F 2>nul
+                                ) else (
+                                    echo Server with PID !SERVER_PID! already stopped
+                                )
+                                del %TEST_RESULTS_DIR%\\server.pid 2>nul
+                            )
+                            
+                            REM Comprehensive cleanup of server processes
+                            echo Final cleanup of server processes...
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *start_server.py*" 2>nul || echo No start_server.py processes found
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *tornado_game_server*" 2>nul || echo No tornado processes found
+                            taskkill /F /IM python.exe /FI "COMMANDLINE eq *scripts/start_server.py*" 2>nul || echo No scripts/start_server.py processes found
+                            
+                            timeout /t 2 /nobreak >nul
+                            echo ✅ Test server cleanup completed
                         '''
                     }
                 } else {
