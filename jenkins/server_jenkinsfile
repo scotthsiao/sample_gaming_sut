@@ -366,17 +366,19 @@ pipeline {
                             # Activate virtual environment
                             . ${PYTHON_ENV}/bin/activate
                             
-                            # Start server in background with proper detachment
-                            nohup python ${SERVER_SCRIPT} \\
+                            # Start server in completely detached session
+                            setsid nohup python ${SERVER_SCRIPT} \\
                                 --host ${SERVER_HOST} \\
                                 --port ${SERVER_PORT} \\
                                 --max-connections ${MAX_CONNECTIONS} \\
                                 > ${LOG_FILE} 2>&1 < /dev/null &
                             
-                            # Store PID and detach from Jenkins session
+                            # Store PID (get last background job PID before it gets detached)
                             PID=$!
                             echo $PID > ${PID_FILE}
-                            disown $PID || true
+                            
+                            # Additional detachment - move to new process group
+                            disown $PID 2>/dev/null || true
                             
                             echo "Log file: ${LOG_FILE}"
                             echo "PID file: ${PID_FILE}"
@@ -386,8 +388,21 @@ pipeline {
                             
                             # Verify server is running
                             if kill -0 $PID 2>/dev/null; then
-                                echo "✅ Server is running successfully"
-                                echo "Server accessible at: ws://${SERVER_HOST}:${SERVER_PORT}"
+                                echo "✅ Server process started with PID: $PID"
+                                
+                                # Give server time to initialize
+                                sleep 3
+                                
+                                # Check if still running after initialization
+                                if kill -0 $PID 2>/dev/null; then
+                                    echo "✅ Server is running successfully and listening"
+                                    echo "Server accessible at: ws://${SERVER_HOST}:${SERVER_PORT}"
+                                    echo "Process is detached and should survive Jenkins job completion"
+                                else
+                                    echo "⚠️  Server process died during startup"
+                                    cat ${LOG_FILE}
+                                    exit 1
+                                fi
                             else
                                 echo "❌ Failed to start server"
                                 cat ${LOG_FILE}
