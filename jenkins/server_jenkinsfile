@@ -50,8 +50,8 @@ pipeline {
         stage('Checkout Code') {
             when {
                 anyOf {
-                    params.ACTION == 'start'
-                    params.ACTION == 'restart'
+                    expression { params.ACTION == 'start' }
+                    expression { params.ACTION == 'restart' }
                 }
             }
             steps {
@@ -82,8 +82,8 @@ pipeline {
         stage('Setup Environment') {
             when {
                 anyOf {
-                    params.ACTION == 'start'
-                    params.ACTION == 'restart'
+                    expression { params.ACTION == 'start' }
+                    expression { params.ACTION == 'restart' }
                 }
             }
             steps {
@@ -158,8 +158,8 @@ pipeline {
         stage('Stop Server') {
             when {
                 anyOf {
-                    params.ACTION == 'stop'
-                    params.ACTION == 'restart'
+                    expression { params.ACTION == 'stop' }
+                    expression { params.ACTION == 'restart' }
                 }
             }
             steps {
@@ -240,8 +240,8 @@ pipeline {
         stage('Start Server') {
             when {
                 anyOf {
-                    params.ACTION == 'start'
-                    params.ACTION == 'restart'
+                    expression { params.ACTION == 'start' }
+                    expression { params.ACTION == 'restart' }
                 }
             }
             steps {
