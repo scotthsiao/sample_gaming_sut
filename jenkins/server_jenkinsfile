@@ -327,25 +327,24 @@ pipeline {
                     echo "🚀 Starting Tornado server..."
                     
                     if (isUnix()) {
-                        sh '''
+                        sh '''#!/bin/bash
                             echo "Starting Tornado server on port ${SERVER_PORT}..."
                             
                             # Activate virtual environment
                             . ${PYTHON_ENV}/bin/activate
                             
-                            # Start server in background
+                            # Start server in background with proper detachment
                             nohup python ${SERVER_SCRIPT} \\
                                 --host ${SERVER_HOST} \\
                                 --port ${SERVER_PORT} \\
                                 --max-connections ${MAX_CONNECTIONS} \\
-                                > ${LOG_FILE} 2>&1 &
+                                > ${LOG_FILE} 2>&1 < /dev/null &
                             
                             # Store PID and detach from Jenkins session
-                            echo $! > ${PID_FILE}
-                            disown
-                            PID=$(cat ${PID_FILE})
+                            PID=$!
+                            echo $PID > ${PID_FILE}
+                            disown $PID || true
                             
-                            echo "Server started with PID: $PID"
                             echo "Log file: ${LOG_FILE}"
                             echo "PID file: ${PID_FILE}"
                             
