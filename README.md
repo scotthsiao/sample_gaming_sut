@@ -35,17 +35,23 @@ sample_gaming_sut/
 │   ├── global_vars.robot      # All variables (single source)
 │   ├── keywords.robot         # All keywords consolidated
 │   └── generated_config.robot # Auto-generated from config.yaml
-├── dockers/                   # Docker environment with Jenkins CI/CD
-│   ├── jenkins/server_jenkinsfile  # Jenkins pipeline with Docker-in-Docker
-│   ├── docker-compose.yml     # Complete Docker stack
-│   ├── jenkins/Dockerfile     # Custom Jenkins image
-│   └── README.md              # Docker setup guide
-├── config.yaml                # Master configuration (single source of truth)
-├── config_loader.py           # Configuration management system
-├── update_jenkins_config.py   # Configuration synchronization
-├── run_tornado_server.py      # Primary server entry point (Tornado-based)
+├── scripts/                   # Entry point scripts and utilities
+│   ├── start_server.py        # Primary server entry point (Tornado-based)
+│   ├── start_client.py        # Client entry point
+│   ├── start_websocket_server.py  # Alternative server entry point
+│   ├── run_tests.py           # Test runner entry point
+│   └── build.py               # Build utilities
+├── config/                    # Configuration management (single source of truth)
+│   ├── config.yaml            # Master configuration file
+│   ├── config_loader.py       # Configuration management system
+│   └── update_jenkins_config.py  # Configuration synchronization
+├── deployment/                # Deployment and infrastructure
+│   └── docker/                # Docker environment with Jenkins CI/CD
+│       ├── jenkins/server_jenkinsfile  # Jenkins pipeline with Docker-in-Docker
+│       ├── docker-compose.yml # Complete Docker stack
+│       ├── jenkins/Dockerfile # Custom Jenkins image
+│       └── README.md          # Docker setup guide
 ├── run_server.py              # Alternative server entry point (websockets-based)
-├── run_client.py              # Client entry point
 ├── run_tests.py               # Test runner entry point
 ├── config.py                  # Legacy configuration (deprecated)
 ├── requirements.txt           # Python dependencies
@@ -89,10 +95,10 @@ sample_gaming_sut/
 **Primary Server (Tornado-based):**
 ```bash
 # Basic server startup (uses config.yaml settings)
-python run_tornado_server.py
+python scripts/start_server.py
 
 # With custom configuration (overrides config.yaml)
-python run_tornado_server.py --host 0.0.0.0 --port 8767 --max-connections 200
+python scripts/start_server.py --host 0.0.0.0 --port 8767 --max-connections 200
 
 # For Docker-in-Docker mode (Jenkins pipeline)
 # Server runs in isolated container on host port 8768
@@ -131,16 +137,16 @@ The Tornado-based server is the primary implementation with proper async event l
 
 ```bash
 # Interactive mode (connects to primary Tornado server by default)
-python run_client.py --interactive
+python scripts/start_client.py --interactive
 
 # Automated demo (connects to primary Tornado server by default)
-python run_client.py --demo
+python scripts/start_client.py --demo
 
 # Connect to custom server address (Tornado server)
-python run_client.py --server ws://localhost:8767 --demo
+python scripts/start_client.py --server ws://localhost:8767 --demo
 
 # Connect to alternative websockets server
-python run_client.py --server ws://localhost:8765 --demo
+python scripts/start_client.py --server ws://localhost:8765 --demo
 ```
 
 ## Game Rules
@@ -200,20 +206,20 @@ All messages use Protocol Buffers with binary serialization:
 The project uses a centralized configuration management system with `config.yaml` as the single source of truth for all server settings.
 
 **Configuration Files:**
-- `config.yaml` - Master configuration file
-- `config_loader.py` - Configuration management system
+- `config/config.yaml` - Master configuration file
+- `config/config_loader.py` - Configuration management system
 - `rf_test/generated_config.robot` - Auto-generated Robot Framework variables
 
 **Configuration Management:**
 ```bash
 # View current configuration
-python config_loader.py --summary
+python config/config_loader.py --summary
 
 # Export Robot Framework variables
-python config_loader.py --export-robot
+python config/config_loader.py --export-robot
 
 # Update all configuration files from config.yaml
-python update_jenkins_config.py
+python config/update_jenkins_config.py
 ```
 
 **config.yaml Structure:**
@@ -361,11 +367,6 @@ robot --include smoke tests/
 robot --include e2e tests/
 ```
 
-**🔧 Configuration Integration:**
-- Tests automatically use settings from `config.yaml`
-- Server URL dynamically configured: `ws://localhost:8768` (Docker-in-Docker mode)
-- No hardcoded ports or URLs in test files
-- Configuration changes applied via `python update_jenkins_config.py`
 
 **📊 Complete Test Coverage (32/32 tests):**
 - **Connection Tests (7)**: WebSocket connectivity, timeouts, reconnection
@@ -379,6 +380,12 @@ robot --include e2e tests/
 - **Complete Game Testing**: Authentication → Room Joining → Betting → Results
 - **Tutorial Ready**: Ultra-compact structure ideal for Robot Framework tutorials
 
+**🔧 Configuration Integration:**
+- Tests automatically use settings from `config/config.yaml`
+- Server URL dynamically configured: `ws://localhost:8768` (Docker-in-Docker mode)
+- No hardcoded ports or URLs in test files
+- Configuration changes applied via `python config/update_jenkins_config.py`
+
 ## Production Deployment
 
 ### Docker Support
@@ -388,7 +395,7 @@ The project includes comprehensive Docker support for development and CI/CD:
 **Docker Compose Services:**
 ```bash
 # Start Jenkins with Docker-in-Docker support
-cd dockers
+cd deployment/docker
 docker-compose up -d
 
 # Access Jenkins at http://localhost:8080

@@ -6,7 +6,7 @@ Complete Docker environment for Jenkins automation with **centralized configurat
 
 ```bash
 # From the project root directory
-cd dockers
+cd deployment/docker
 
 # Build and start Jenkins
 docker-compose up -d
@@ -83,7 +83,7 @@ services:
 ### Pipeline Configuration
 1. **Create Pipeline Job** in Jenkins UI
 2. **Repository URL**: `https://github.com/scotthsiao/sample_gaming_sut.git`
-3. **Script Path**: `dockers/jenkins/server_jenkinsfile`
+3. **Script Path**: `deployment/docker/jenkins/server_jenkinsfile`
 4. **Branch**: `*/main`
 
 ### Available Actions
@@ -385,4 +385,4 @@ docker-compose up -d
 
 **Your Docker Jenkins environment is now ready! 🎮🐳**
 
-Access Jenkins at http://localhost:8080 and create your pipeline job pointing to `dockers/jenkins/server_jenkinsfile`.
+Access Jenkins at http://localhost:8080 and create your pipeline job pointing to `deployment/docker/jenkins/server_jenkinsfile`.

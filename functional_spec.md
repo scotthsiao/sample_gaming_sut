@@ -963,10 +963,10 @@ logging (built-in)
 ### 13.3 Configuration Management
 
 **Centralized Configuration System:**
-The system uses a **single source of truth** configuration approach with `config.yaml` as the master configuration file.
+The system uses a **single source of truth** configuration approach with `config/config.yaml` as the master configuration file.
 
 ```yaml
-# config.yaml - Master Configuration
+# config/config.yaml - Master Configuration
 server:
   host: "0.0.0.0"
   external_host: "localhost"
@@ -1003,8 +1003,8 @@ environments:
 ```
 
 **Configuration Management Tools:**
-- `config_loader.py`: Python configuration management system
-- `update_jenkins_config.py`: Synchronizes all config files from config.yaml
+- `config/config_loader.py`: Python configuration management system
+- `config/update_jenkins_config.py`: Synchronizes all config files from config.yaml
 - `rf_test/generated_config.robot`: Auto-generated Robot Framework variables
 
 **Logging Configuration:**
@@ -1025,7 +1025,7 @@ LOGGING_CONFIG = {
 **1. Docker Environment Setup:**
 ```bash
 # Start Jenkins with Docker-in-Docker support
-cd dockers
+cd deployment/docker
 docker-compose up -d
 
 # Access Jenkins at http://localhost:8080
@@ -1034,7 +1034,7 @@ docker-compose logs jenkins 2>&1 | grep "initialAdminPassword"
 ```
 
 **2. Jenkins Pipeline Configuration:**
-- Create Pipeline job pointing to `dockers/jenkins/server_jenkinsfile`
+- Create Pipeline job pointing to `deployment/docker/jenkins/server_jenkinsfile`
 - Repository: `https://github.com/scotthsiao/sample_gaming_sut.git`
 - Branch: `*/main`
 
@@ -1042,11 +1042,11 @@ docker-compose logs jenkins 2>&1 | grep "initialAdminPassword"
 ```bash
 # Jenkins pipeline automatically:
 # 1. Pulls latest code from GitHub
-# 2. Loads configuration from config.yaml
+# 2. Loads configuration from config/config.yaml
 # 3. Creates isolated Docker container (Python 3.11)
 # 4. Copies project files to container
 # 5. Installs dependencies inside container
-# 6. Starts Tornado server (container:8767 → host:8768)
+# 6. Starts Tornado server via scripts/start_server.py (container:8767 → host:8768)
 # 7. Verifies container status and connectivity
 ```
 
@@ -1073,10 +1073,10 @@ pip install -r requirements.txt
 **2. Configuration Setup:**
 ```bash
 # Apply centralized configuration
-python config_loader.py --export-robot
+python config/config_loader.py --export-robot
 
 # Update all config files from config.yaml
-python update_jenkins_config.py
+python config/update_jenkins_config.py
 ```
 
 **3. Protocol Buffers Compilation:**
@@ -1086,11 +1086,11 @@ protoc --python_out=. --pyi_out=. proto/game_messages.proto
 
 **4. Server Startup:**
 ```bash
-# Uses config.yaml settings automatically
-python run_tornado_server.py
+# Uses config/config.yaml settings automatically
+python scripts/start_server.py
 
 # Or with custom overrides
-python run_tornado_server.py --host 0.0.0.0 --port 8767 --max-connections 200
+python scripts/start_server.py --host 0.0.0.0 --port 8767 --max-connections 200
 ```
 
 **5. Health Check:**
@@ -1111,7 +1111,7 @@ robot --include smoke tests/  # Run critical tests only
 **2. Configuration Verification:**
 ```bash
 # View current configuration
-python config_loader.py --summary
+python config/config_loader.py --summary
 
 # Test configuration consistency
 robot --dryrun tests/

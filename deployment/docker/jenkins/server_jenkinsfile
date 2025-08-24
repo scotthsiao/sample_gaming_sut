@@ -12,7 +12,7 @@ pipeline {
         // Paths
         WORKSPACE_DIR = "${WORKSPACE}"
         VENV_PATH = "${WORKSPACE}/${PYTHON_ENV}"
-        SERVER_SCRIPT = "run_tornado_server.py"
+        SERVER_SCRIPT = "scripts/start_server.py"
         PID_FILE = "${WORKSPACE}/tornado_server.pid"
         LOG_FILE = "${WORKSPACE}/tornado_server.log"
     }

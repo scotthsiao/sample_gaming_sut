@@ -100,7 +100,7 @@ class Config:
     def export_robot_vars(self, output_file: str = None) -> str:
         """Export Robot Framework variables to a .robot file"""
         if output_file is None:
-            output_file = Path(__file__).parent / "rf_test" / "generated_config.robot"
+            output_file = Path(__file__).parent.parent / "rf_test" / "generated_config.robot"
         
         vars_dict = self.get_robot_framework_vars()
         

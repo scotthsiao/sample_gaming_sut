@@ -10,7 +10,7 @@ from config_loader import Config
 
 def update_jenkinsfile_variables(config: Config):
     """Update Jenkins pipeline variables"""
-    jenkinsfile_path = Path(__file__).parent / "jenkins" / "server_jenkinsfile"
+    jenkinsfile_path = Path(__file__).parent.parent / "deployment" / "docker" / "jenkins" / "server_jenkinsfile"
     
     if not jenkinsfile_path.exists():
         print(f"Jenkinsfile not found: {jenkinsfile_path}")
@@ -56,8 +56,7 @@ def update_jenkinsfile_variables(config: Config):
 def update_docker_compose_ports(config: Config):
     """Update docker-compose port configurations"""
     compose_files = [
-        Path(__file__).parent / "dockers" / "docker-compose.yml",
-        Path(__file__).parent / "jenkins" / "docker-compose.yml"
+        Path(__file__).parent.parent / "deployment" / "docker" / "docker-compose.yml"
     ]
     
     jenkins_direct_port = config.get_server_config().get('jenkins_direct_port', 8767)
