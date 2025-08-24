@@ -35,11 +35,8 @@ sample_gaming_sut/
 │   ├── global_vars.robot      # All variables (single source)
 │   ├── keywords.robot         # All keywords consolidated
 │   └── generated_config.robot # Auto-generated from config.yaml
-├── jenkins/                   # Jenkins CI/CD pipeline
-│   ├── server_jenkinsfile     # Main pipeline with Docker-in-Docker
-│   ├── docker-compose.yml     # Jenkins containerization
-│   └── README.md              # Jenkins setup guide
-├── dockers/                   # Docker environment
+├── dockers/                   # Docker environment with Jenkins CI/CD
+│   ├── jenkins/server_jenkinsfile  # Jenkins pipeline with Docker-in-Docker
 │   ├── docker-compose.yml     # Complete Docker stack
 │   ├── jenkins/Dockerfile     # Custom Jenkins image
 │   └── README.md              # Docker setup guide

@@ -1034,7 +1034,7 @@ docker-compose logs jenkins 2>&1 | grep "initialAdminPassword"
 ```
 
 **2. Jenkins Pipeline Configuration:**
-- Create Pipeline job pointing to `jenkins/server_jenkinsfile`
+- Create Pipeline job pointing to `dockers/jenkins/server_jenkinsfile`
 - Repository: `https://github.com/scotthsiao/sample_gaming_sut.git`
 - Branch: `*/main`
 
