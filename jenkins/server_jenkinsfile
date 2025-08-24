@@ -1,0 +1,464 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Environment variables
+        PYTHON_ENV = 'venv'
+        SERVER_PORT = '8767'
+        SERVER_HOST = '0.0.0.0'
+        MAX_CONNECTIONS = '200'
+        LOG_LEVEL = 'INFO'
+        
+        // Paths
+        WORKSPACE_DIR = "${WORKSPACE}"
+        VENV_PATH = "${WORKSPACE}/${PYTHON_ENV}"
+        SERVER_SCRIPT = "run_tornado_server.py"
+        PID_FILE = "${WORKSPACE}/tornado_server.pid"
+        LOG_FILE = "${WORKSPACE}/tornado_server.log"
+    }
+    
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['start', 'stop', 'restart', 'status'],
+            description: 'Action to perform on the Tornado server'
+        )
+        string(
+            name: 'SERVER_PORT',
+            defaultValue: '8767',
+            description: 'Port number for the Tornado server'
+        )
+        string(
+            name: 'MAX_CONNECTIONS',
+            defaultValue: '200',
+            description: 'Maximum number of concurrent connections'
+        )
+    }
+    
+    options {
+        // Keep only last 10 builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        
+        // Timeout the build after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        
+        // Disable concurrent builds
+        disableConcurrentBuilds()
+    }
+    
+    stages {
+        stage('Checkout Code') {
+            when {
+                anyOf {
+                    params.ACTION == 'start'
+                    params.ACTION == 'restart'
+                }
+            }
+            steps {
+                script {
+                    echo "🔄 Checking out latest code from GitHub..."
+                    
+                    // Clean workspace
+                    deleteDir()
+                    
+                    // Checkout the repository
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/scotthsiao/sample_gaming_sut.git'
+                        ]],
+                        extensions: [
+                            [$class: 'CleanBeforeCheckout'],
+                            [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]
+                        ]
+                    ])
+                    
+                    echo "✅ Code checkout completed"
+                }
+            }
+        }
+        
+        stage('Setup Environment') {
+            when {
+                anyOf {
+                    params.ACTION == 'start'
+                    params.ACTION == 'restart'
+                }
+            }
+            steps {
+                script {
+                    echo "🔧 Setting up Python environment..."
+                    
+                    if (isUnix()) {
+                        // Linux/macOS setup
+                        sh '''
+                            echo "Creating Python virtual environment..."
+                            python3 -m venv ${PYTHON_ENV}
+                            
+                            echo "Activating virtual environment and installing dependencies..."
+                            . ${PYTHON_ENV}/bin/activate
+                            
+                            echo "Upgrading pip..."
+                            pip install --upgrade pip
+                            
+                            echo "Installing requirements..."
+                            if [ -f requirements.txt ]; then
+                                pip install -r requirements.txt
+                            else
+                                echo "❌ requirements.txt not found"
+                                exit 1
+                            fi
+                            
+                            echo "Compiling Protocol Buffers..."
+                            if [ -f proto/game_messages.proto ]; then
+                                protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                            else
+                                echo "❌ Protocol Buffers file not found"
+                                exit 1
+                            fi
+                            
+                            echo "✅ Environment setup completed"
+                        '''
+                    } else {
+                        // Windows setup
+                        bat '''
+                            echo Creating Python virtual environment...
+                            python -m venv %PYTHON_ENV%
+                            
+                            echo Activating virtual environment and installing dependencies...
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            echo Upgrading pip...
+                            pip install --upgrade pip
+                            
+                            echo Installing requirements...
+                            if exist requirements.txt (
+                                pip install -r requirements.txt
+                            ) else (
+                                echo ❌ requirements.txt not found
+                                exit /b 1
+                            )
+                            
+                            echo Compiling Protocol Buffers...
+                            if exist proto\\game_messages.proto (
+                                protoc --python_out=. --pyi_out=. proto/game_messages.proto
+                            ) else (
+                                echo ❌ Protocol Buffers file not found
+                                exit /b 1
+                            )
+                            
+                            echo ✅ Environment setup completed
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Stop Server') {
+            when {
+                anyOf {
+                    params.ACTION == 'stop'
+                    params.ACTION == 'restart'
+                }
+            }
+            steps {
+                script {
+                    echo "🛑 Stopping Tornado server..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            if [ -f ${PID_FILE} ]; then
+                                PID=$(cat ${PID_FILE})
+                                echo "Found PID file with PID: $PID"
+                                
+                                if kill -0 $PID 2>/dev/null; then
+                                    echo "Stopping server with PID: $PID"
+                                    kill -TERM $PID
+                                    
+                                    # Wait up to 30 seconds for graceful shutdown
+                                    for i in {1..30}; do
+                                        if ! kill -0 $PID 2>/dev/null; then
+                                            echo "✅ Server stopped gracefully"
+                                            break
+                                        fi
+                                        echo "Waiting for server to stop... ($i/30)"
+                                        sleep 1
+                                    done
+                                    
+                                    # Force kill if still running
+                                    if kill -0 $PID 2>/dev/null; then
+                                        echo "⚠️  Force killing server with PID: $PID"
+                                        kill -KILL $PID
+                                        sleep 2
+                                    fi
+                                else
+                                    echo "⚠️  Process with PID $PID not running"
+                                fi
+                                
+                                rm -f ${PID_FILE}
+                            else
+                                echo "ℹ️  No PID file found - server may not be running"
+                            fi
+                            
+                            # Kill any remaining processes
+                            pkill -f "run_tornado_server.py" || true
+                            pkill -f "tornado_game_server.py" || true
+                            
+                            echo "✅ Server stop completed"
+                        '''
+                    } else {
+                        bat '''
+                            if exist %PID_FILE% (
+                                set /p PID=<%PID_FILE%
+                                echo Found PID file with PID: !PID!
+                                
+                                tasklist /fi "PID eq !PID!" 2>nul | find "!PID!" >nul
+                                if !errorlevel! equ 0 (
+                                    echo Stopping server with PID: !PID!
+                                    taskkill /PID !PID! /T /F
+                                    echo ✅ Server stopped
+                                ) else (
+                                    echo ⚠️  Process with PID !PID! not running
+                                )
+                                
+                                del %PID_FILE%
+                            ) else (
+                                echo ℹ️  No PID file found - server may not be running
+                            )
+                            
+                            REM Kill any remaining processes
+                            taskkill /F /IM python.exe /FI "WINDOWTITLE eq *tornado*" 2>nul || echo No processes found
+                            
+                            echo ✅ Server stop completed
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Start Server') {
+            when {
+                anyOf {
+                    params.ACTION == 'start'
+                    params.ACTION == 'restart'
+                }
+            }
+            steps {
+                script {
+                    echo "🚀 Starting Tornado server..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            echo "Starting Tornado server on port ${SERVER_PORT}..."
+                            
+                            # Activate virtual environment
+                            . ${PYTHON_ENV}/bin/activate
+                            
+                            # Start server in background
+                            nohup python ${SERVER_SCRIPT} \\
+                                --host ${SERVER_HOST} \\
+                                --port ${SERVER_PORT} \\
+                                --max-connections ${MAX_CONNECTIONS} \\
+                                > ${LOG_FILE} 2>&1 &
+                            
+                            # Store PID
+                            echo $! > ${PID_FILE}
+                            PID=$(cat ${PID_FILE})
+                            
+                            echo "Server started with PID: $PID"
+                            echo "Log file: ${LOG_FILE}"
+                            echo "PID file: ${PID_FILE}"
+                            
+                            # Wait for server to start
+                            sleep 5
+                            
+                            # Verify server is running
+                            if kill -0 $PID 2>/dev/null; then
+                                echo "✅ Server is running successfully"
+                                echo "Server accessible at: ws://${SERVER_HOST}:${SERVER_PORT}"
+                            else
+                                echo "❌ Failed to start server"
+                                cat ${LOG_FILE}
+                                exit 1
+                            fi
+                        '''
+                    } else {
+                        bat '''
+                            echo Starting Tornado server on port %SERVER_PORT%...
+                            
+                            REM Activate virtual environment
+                            call %PYTHON_ENV%\\Scripts\\activate.bat
+                            
+                            REM Start server in background
+                            start /B python %SERVER_SCRIPT% ^
+                                --host %SERVER_HOST% ^
+                                --port %SERVER_PORT% ^
+                                --max-connections %MAX_CONNECTIONS% ^
+                                > %LOG_FILE% 2>&1
+                            
+                            REM Get PID (Windows approach)
+                            timeout /t 2 /nobreak > nul
+                            for /f "tokens=2" %%i in ('tasklist /fi "imagename eq python.exe" /fo csv ^| find "python.exe"') do (
+                                echo %%i > %PID_FILE%
+                                set PID=%%i
+                                goto :found
+                            )
+                            :found
+                            
+                            echo Server started with approximate PID: %PID%
+                            echo Log file: %LOG_FILE%
+                            echo PID file: %PID_FILE%
+                            
+                            REM Wait for server to start
+                            timeout /t 5 /nobreak > nul
+                            
+                            echo ✅ Server startup initiated
+                            echo Server should be accessible at: ws://%SERVER_HOST%:%SERVER_PORT%
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Server Status') {
+            steps {
+                script {
+                    echo "📊 Checking Tornado server status..."
+                    
+                    if (isUnix()) {
+                        sh '''
+                            echo "=== SERVER STATUS ==="
+                            
+                            if [ -f ${PID_FILE} ]; then
+                                PID=$(cat ${PID_FILE})
+                                echo "PID file exists: ${PID_FILE}"
+                                echo "Stored PID: $PID"
+                                
+                                if kill -0 $PID 2>/dev/null; then
+                                    echo "✅ Server is RUNNING (PID: $PID)"
+                                    
+                                    # Show process info
+                                    ps aux | grep $PID | grep -v grep || true
+                                    
+                                    # Show listening ports
+                                    echo "\\n--- Listening Ports ---"
+                                    netstat -tlnp 2>/dev/null | grep :${SERVER_PORT} || echo "No port ${SERVER_PORT} found"
+                                    
+                                else
+                                    echo "❌ Server is NOT RUNNING (PID $PID not found)"
+                                fi
+                            else
+                                echo "ℹ️  No PID file found"
+                                echo "❓ Server status UNKNOWN"
+                            fi
+                            
+                            # Show recent log entries
+                            if [ -f ${LOG_FILE} ]; then
+                                echo "\\n--- Recent Log Entries (last 10 lines) ---"
+                                tail -n 10 ${LOG_FILE}
+                            else
+                                echo "ℹ️  No log file found: ${LOG_FILE}"
+                            fi
+                            
+                            # Show all Python processes (for debugging)
+                            echo "\\n--- All Python/Tornado Processes ---"
+                            ps aux | grep -E "(python|tornado)" | grep -v grep || echo "No Python processes found"
+                        '''
+                    } else {
+                        bat '''
+                            echo === SERVER STATUS ===
+                            
+                            if exist %PID_FILE% (
+                                set /p PID=<%PID_FILE%
+                                echo PID file exists: %PID_FILE%
+                                echo Stored PID: !PID!
+                                
+                                tasklist /fi "PID eq !PID!" 2>nul | find "!PID!" >nul
+                                if !errorlevel! equ 0 (
+                                    echo ✅ Server is RUNNING ^(PID: !PID!^)
+                                    tasklist /fi "PID eq !PID!"
+                                ) else (
+                                    echo ❌ Server is NOT RUNNING ^(PID !PID! not found^)
+                                )
+                            ) else (
+                                echo ℹ️  No PID file found
+                                echo ❓ Server status UNKNOWN
+                            )
+                            
+                            REM Show listening ports
+                            echo.
+                            echo --- Listening Ports ---
+                            netstat -an | find ":%SERVER_PORT%" || echo No port %SERVER_PORT% found
+                            
+                            REM Show recent log entries
+                            if exist %LOG_FILE% (
+                                echo.
+                                echo --- Recent Log Entries ^(last 10 lines^) ---
+                                powershell "Get-Content '%LOG_FILE%' -Tail 10"
+                            ) else (
+                                echo ℹ️  No log file found: %LOG_FILE%
+                            )
+                            
+                            REM Show all Python processes
+                            echo.
+                            echo --- All Python Processes ---
+                            tasklist /fi "imagename eq python.exe" || echo No Python processes found
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "🏁 Build completed for action: ${params.ACTION}"
+                
+                // Archive logs if they exist
+                if (fileExists("${LOG_FILE}")) {
+                    archiveArtifacts artifacts: "*.log", fingerprint: true, allowEmptyArchive: true
+                }
+                
+                // Clean up old logs (keep last 5)
+                if (isUnix()) {
+                    sh '''
+                        find . -name "tornado_server_*.log" -type f -mtime +5 -delete || true
+                    '''
+                } else {
+                    bat '''
+                        forfiles /m tornado_server_*.log /d -5 /c "cmd /c del @path" 2>nul || echo No old logs to clean
+                    '''
+                }
+            }
+        }
+        
+        success {
+            echo "✅ Jenkins job completed successfully!"
+        }
+        
+        failure {
+            script {
+                echo "❌ Jenkins job failed!"
+                
+                // Show error logs if available
+                if (fileExists("${LOG_FILE}")) {
+                    if (isUnix()) {
+                        sh "echo '--- Error Log Contents ---' && cat ${LOG_FILE}"
+                    } else {
+                        bat "echo --- Error Log Contents --- && type %LOG_FILE%"
+                    }
+                }
+            }
+        }
+        
+        cleanup {
+            script {
+                echo "🧹 Performing cleanup..."
+                // Note: We intentionally don't clean the workspace to preserve the server state
+                // Only clean temporary files if needed
+            }
+        }
+    }
+}
