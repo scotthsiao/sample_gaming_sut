@@ -279,7 +279,11 @@ pipeline {
                                 echo "ℹ️  No PID file found - server may not be running"
                             fi
                             
-                            # Kill any remaining processes
+                            # Stop Docker containers
+                            docker stop game-server-instance 2>/dev/null || true
+                            docker rm game-server-instance 2>/dev/null || true
+                            
+                            # Kill any remaining processes (fallback)
                             pkill -f "run_tornado_server.py" || true
                             pkill -f "tornado_game_server.py" || true
                             
@@ -366,18 +370,48 @@ pipeline {
                             # Activate virtual environment
                             . ${PYTHON_ENV}/bin/activate
                             
-                            # Use classic nohup approach for process isolation
-                            echo "Starting server with nohup..."
-                            nohup python3 ${SERVER_SCRIPT} \\
-                                --host ${SERVER_HOST} \\
-                                --port ${SERVER_PORT} \\
-                                --max-connections ${MAX_CONNECTIONS} \\
-                                < /dev/null > ${LOG_FILE} 2>&1 &
+                            # Use Docker-in-Docker for complete isolation  
+                            echo "Starting server in separate Docker container..."
                             
-                            # Store PID
-                            echo \$! > ${PID_FILE}
-                            PID=\$(cat ${PID_FILE})
-                            echo "Server started with nohup, PID: \$PID"
+                            # Stop any existing game server container
+                            docker stop game-server-instance 2>/dev/null || true
+                            docker rm game-server-instance 2>/dev/null || true
+                            
+                            # Start game server in detached container
+                            CONTAINER_ID=\$(docker run -d \\
+                                --name game-server-instance \\
+                                --network dockers_jenkins-network \\
+                                -p 8768:8767 \\
+                                -v \$(pwd):/app \\
+                                -w /app \\
+                                python:3.11-slim \\
+                                bash -c "
+                                    pip install -r requirements.txt && \\
+                                    python3 ${SERVER_SCRIPT} \\
+                                        --host 0.0.0.0 \\
+                                        --port 8767 \\
+                                        --max-connections ${MAX_CONNECTIONS}
+                                ")
+                            
+                            # Store container ID 
+                            echo \$CONTAINER_ID > ${PID_FILE}
+                            echo "Game server container started: \$CONTAINER_ID"
+                            
+                            # Wait for container to start and server to initialize
+                            echo "Waiting for server to initialize..."
+                            sleep 10
+                            
+                            # Verify container is running
+                            if docker ps -q --filter "id=\$CONTAINER_ID" | grep -q .; then
+                                echo "✅ Game server container is running"
+                                echo "Container accessible on host port 8768 -> container port 8767"
+                                docker ps --filter "id=\$CONTAINER_ID"
+                            else
+                                echo "❌ Game server container failed to start or died"
+                                echo "Container logs:"
+                                docker logs \$CONTAINER_ID 2>/dev/null || true
+                                exit 1
+                            fi
                             
                             # Verify server started successfully
                             if [ -f ${PID_FILE} ]; then
@@ -468,25 +502,39 @@ pipeline {
                             echo "=== SERVER STATUS ==="
                             
                             if [ -f ${PID_FILE} ]; then
-                                PID=$(cat ${PID_FILE})
-                                echo "PID file exists: ${PID_FILE}"
-                                echo "Stored PID: $PID"
+                                CONTAINER_ID=$(cat ${PID_FILE})
+                                echo "Container ID file exists: ${PID_FILE}"
+                                echo "Stored Container ID: $CONTAINER_ID"
                                 
-                                if kill -0 $PID 2>/dev/null; then
-                                    echo "✅ Server is RUNNING (PID: $PID)"
+                                if docker ps -q --filter "id=$CONTAINER_ID" | grep -q .; then
+                                    echo "✅ Game server container is RUNNING"
                                     
-                                    # Show process info
-                                    ps aux | grep $PID | grep -v grep || true
+                                    # Show container info
+                                    echo "\\n--- Container Status ---"
+                                    docker ps --filter "id=$CONTAINER_ID"
                                     
-                                    # Show listening ports
-                                    echo "\\n--- Listening Ports ---"
-                                    netstat -tlnp 2>/dev/null | grep :${SERVER_PORT} || echo "No port ${SERVER_PORT} found"
+                                    # Show listening ports on host
+                                    echo "\\n--- Host Listening Ports ---"
+                                    netstat -tlnp 2>/dev/null | grep :8768 || echo "No port 8768 found on host"
+                                    
+                                    # Show container logs (last 5 lines)
+                                    echo "\\n--- Container Logs (last 5 lines) ---"
+                                    docker logs --tail 5 $CONTAINER_ID 2>/dev/null || echo "No logs available"
                                     
                                 else
-                                    echo "❌ Server is NOT RUNNING (PID $PID not found)"
+                                    echo "❌ Game server container is NOT RUNNING"
+                                    echo "\\n--- Checking if container exists ---"
+                                    if docker ps -a -q --filter "id=$CONTAINER_ID" | grep -q .; then
+                                        echo "Container exists but is stopped:"
+                                        docker ps -a --filter "id=$CONTAINER_ID"
+                                        echo "\\n--- Container Logs ---"
+                                        docker logs $CONTAINER_ID 2>/dev/null || echo "No logs available"
+                                    else
+                                        echo "Container does not exist"
+                                    fi
                                 fi
                             else
-                                echo "ℹ️  No PID file found"
+                                echo "ℹ️  No container ID file found"
                                 echo "❓ Server status UNKNOWN"
                             fi
                             
